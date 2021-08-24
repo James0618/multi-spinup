@@ -2,7 +2,7 @@
 gamma: 0.995
 seed: 0
 cpu: 8
-steps: 8000
+steps: 12000
 epochs: 500
 hidden_dim: 128
 
@@ -10,6 +10,7 @@ hidden_dim: 128
 max_cycle: 120
 map_size: 16
 step_reward: -0.005
-dead_penalty: -2.5
+dead_penalty: -1.0
 attack_penalty: -0.0
 attack_opponent_reward: 0.5
+enemy_policy: 'ppo'

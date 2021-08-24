@@ -233,7 +233,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     obs, ep_ret, ep_len = env.reset(first_time=True), 0, 0
 
     ally_policy = policy.Policy(args=args, actor_critic=ac)
-    enemy_policy = policy.Policy(args=args, actor_critic=None, policy='ppo')
+    enemy_policy = policy.Policy(args=args, actor_critic=None, policy=args.enemy_policy)
 
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
@@ -267,9 +267,15 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
             epoch_ended = steps_in_buffer >= local_steps_per_epoch
 
             if terminal or epoch_ended:
+                if epoch_ended and not terminal:
+                    # print('Warning: trajectory cut off by epoch at %d steps.' % ep_len, flush=True)
+                    pass
                 # if trajectory didn't reach terminal state, bootstrap value target
                 if epoch_ended:
-                    _, v, _ = ally_policy.choose_action(obs)
+                    v = {agent: 0 for agent in env.possible_agents}
+                    _, temp, _ = ally_policy.choose_action(obs)
+                    for v_key in temp.keys():
+                        v[v_key] = temp[v_key]
                 else:
                     v = {agent: 0 for agent in env.possible_agents}
                 buf.finish_path(v)

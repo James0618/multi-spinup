@@ -1,11 +1,11 @@
 {
     "actor_critic":	"CNNActorCritic",
     "args":	{
-        "namespace(attack_opponent_reward=0.5, attack_penalty=0, cpu=1, dead_penalty=-0.1, epochs=500, exp_name='ppo', gamma=0.995, hidden_dim=128, input_shape=[torch.Size([9, 13, 13]), torch.Size([23])], map_size=25, max_agents={'red': 20, 'blue': 20}, max_cycle=120, n_actions=21, observation_shape=torch.Size([9, 13, 13]), seed=0, state_shape=torch.Size([3, 25, 25]), step_reward=-0.005, steps=8000)":	{
+        "namespace(attack_opponent_reward=0.5, attack_penalty=-0.0, cpu=8, dead_penalty=-2.5, epochs=500, exp_name='ppo', gamma=0.995, hidden_dim=128, input_shape=[torch.Size([9, 13, 13]), torch.Size([23])], map_size=16, max_agents={'red': 6, 'blue': 6}, max_cycle=120, n_actions=21, observation_shape=torch.Size([9, 13, 13]), seed=0, state_shape=torch.Size([3, 16, 16]), step_reward=-0.005, steps=12000)":	{
             "attack_opponent_reward":	0.5,
-            "attack_penalty":	0,
-            "cpu":	1,
-            "dead_penalty":	-0.1,
+            "attack_penalty":	-0.0,
+            "cpu":	8,
+            "dead_penalty":	-2.5,
             "epochs":	500,
             "exp_name":	"ppo",
             "gamma":	0.995,
@@ -20,10 +20,10 @@
                     23
                 ]
             ],
-            "map_size":	25,
+            "map_size":	16,
             "max_agents":	{
-                "blue":	"20",
-                "red":	"20"
+                "blue":	"6",
+                "red":	"6"
             },
             "max_cycle":	120,
             "n_actions":	"21",
@@ -35,21 +35,21 @@
             "seed":	0,
             "state_shape":	[
                 3,
-                25,
-                25
+                16,
+                16
             ],
             "step_reward":	-0.005,
-            "steps":	8000
+            "steps":	12000
         }
     },
     "clip_ratio":	0.2,
-    "env_fn":	"<function run.<locals>.<lambda> at 0x7f163b7c9730>",
+    "env_fn":	"<function run.<locals>.<lambda> at 0x7ff875dda378>",
     "epochs":	500,
     "exp_name":	"ppo",
     "gamma":	0.995,
     "lam":	0.97,
     "logger":	{
-        "<spinup.utils.logx.EpochLogger object at 0x7f15600c0940>":	{
+        "<spinup.utils.logx.EpochLogger object at 0x7ff875db35c0>":	{
             "epoch_dict":	{},
             "exp_name":	"ppo",
             "first_row":	true,
@@ -71,7 +71,7 @@
     "pi_lr":	0.0004,
     "save_freq":	10,
     "seed":	0,
-    "steps_per_epoch":	8000,
+    "steps_per_epoch":	12000,
     "target_kl":	0.01,
     "train_pi_iters":	50,
     "train_v_iters":	50,

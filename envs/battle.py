@@ -14,6 +14,7 @@ class BattleEnv:
         self.action_space = self.env.action_spaces[self.possible_agents[0]]
         self.observation_space = self.env.observation_spaces[self.possible_agents[0]]
         self.state_space = self.env.state_space
+        self.controlled_group = 'red'
 
     def reset(self, first_time=False):
         if first_time:
@@ -24,14 +25,42 @@ class BattleEnv:
 
         observations, positions = self.preprocessor.preprocess(observations=observations)
 
+        if self.controlled_group == 'blue':
+            return self._change_side(observations)
+
         return observations
 
     def step(self, actions):
         assert type(actions) is dict
+        if self.controlled_group == 'blue':
+            actions = self._change_side(actions)
+
         observations, rewards, done, infos = self.env.step(actions)
         observations, positions = self.preprocessor.preprocess(observations=observations)
+
+        if self.controlled_group == 'blue':
+            return self._change_side(observations), self._change_side(rewards), self._change_side(done), \
+                   self._change_side(infos)
 
         return observations, rewards, done, infos
 
     def render(self):
         self.env.render()
+
+    def change_side(self):
+        if self.controlled_group == 'red':
+            self.controlled_group = 'blue'
+        else:
+            self.controlled_group = 'red'
+
+    def _change_side(self, variables):
+        results = {}
+        for key in variables.keys():
+            if 'red' in key:
+                new_key = key.replace('red', 'blue')
+            else:
+                new_key = key.replace('blue', 'red')
+
+            results[new_key] = variables[key]
+
+        return results

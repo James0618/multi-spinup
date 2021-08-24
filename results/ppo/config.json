@@ -1,0 +1,79 @@
+{
+    "actor_critic":	"CNNActorCritic",
+    "args":	{
+        "namespace(attack_opponent_reward=0.5, attack_penalty=0, cpu=8, dead_penalty=-0.1, epochs=500, exp_name='ppo', gamma=0.995, hidden_dim=128, input_shape=[torch.Size([9, 13, 13]), torch.Size([23])], map_size=16, max_agents={'red': 6, 'blue': 6}, max_cycle=120, n_actions=21, observation_shape=torch.Size([9, 13, 13]), seed=0, state_shape=torch.Size([3, 16, 16]), step_reward=-0.005, steps=8000)":	{
+            "attack_opponent_reward":	0.5,
+            "attack_penalty":	0,
+            "cpu":	8,
+            "dead_penalty":	-0.1,
+            "epochs":	500,
+            "exp_name":	"ppo",
+            "gamma":	0.995,
+            "hidden_dim":	128,
+            "input_shape":	[
+                [
+                    9,
+                    13,
+                    13
+                ],
+                [
+                    23
+                ]
+            ],
+            "map_size":	16,
+            "max_agents":	{
+                "blue":	"6",
+                "red":	"6"
+            },
+            "max_cycle":	120,
+            "n_actions":	"21",
+            "observation_shape":	[
+                9,
+                13,
+                13
+            ],
+            "seed":	0,
+            "state_shape":	[
+                3,
+                16,
+                16
+            ],
+            "step_reward":	-0.005,
+            "steps":	8000
+        }
+    },
+    "clip_ratio":	0.2,
+    "env_fn":	"<function run.<locals>.<lambda> at 0x7f20245602f0>",
+    "epochs":	500,
+    "exp_name":	"ppo",
+    "gamma":	0.995,
+    "lam":	0.97,
+    "logger":	{
+        "<spinup.utils.logx.EpochLogger object at 0x7f20245569b0>":	{
+            "epoch_dict":	{},
+            "exp_name":	"ppo",
+            "first_row":	true,
+            "log_current_row":	{},
+            "log_headers":	[],
+            "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/ppo",
+            "output_file":	{
+                "<_io.TextIOWrapper name='/home/drl/PycharmProjects/multi-spinup/results/ppo/progress.txt' mode='w' encoding='UTF-8'>":	{
+                    "mode":	"w"
+                }
+            }
+        }
+    },
+    "logger_kwargs":	{
+        "exp_name":	"ppo",
+        "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/ppo"
+    },
+    "max_ep_len":	1000,
+    "pi_lr":	0.0004,
+    "save_freq":	10,
+    "seed":	0,
+    "steps_per_epoch":	8000,
+    "target_kl":	0.01,
+    "train_pi_iters":	50,
+    "train_v_iters":	50,
+    "vf_lr":	0.0008
+}

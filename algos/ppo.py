@@ -146,11 +146,11 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Set up experience buffer
     local_steps_per_epoch = int(steps_per_epoch / num_procs())
-    groups = ['red', 'blue']
-    controlled_group = 0
 
+    # default controlled group is red
+    groups = ['red', 'blue']
     agents = env.possible_agents
-    agents = [agent for agent in agents if groups[controlled_group] in agent]
+    agents = [agent for agent in agents if 'red' in agent]
     buf = buffer.PPOBuffer(obs_shape=obs_shape, n_actions=n_actions, max_agents=len(agents), max_cycle=args.max_cycle,
                            buffer_size=local_steps_per_epoch, agents=agents)
 
@@ -238,26 +238,27 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         steps_in_buffer = 0
+        env.change_side()
         while steps_in_buffer < local_steps_per_epoch:
             ally_actions, values, log_probs = ally_policy.choose_action({
-                key: obs[key] for key in obs.keys() if groups[controlled_group] in key})
+                key: obs[key] for key in obs.keys() if 'red' in key})
             enemy_actions, _, _ = enemy_policy.choose_action({
-                key: obs[key] for key in obs.keys() if groups[1 - controlled_group] in key})
+                key: obs[key] for key in obs.keys() if 'blue' in key})
 
             actions = {**ally_actions, **enemy_actions}
 
             next_obs, rewards, done, _ = env.step(actions)
-            ep_ret += sum([rewards[agent] for agent in rewards.keys() if groups[controlled_group] in agent])
+            ep_ret += sum([rewards[agent] for agent in rewards.keys() if 'red' in agent])
             ep_len += 1
 
             # save and log
-            buf.store(obs={agent: obs[agent] for agent in obs.keys() if groups[controlled_group] in agent},
-                      act={agent: actions[agent] for agent in actions.keys() if groups[controlled_group] in agent},
-                      rew={agent: rewards[agent] for agent in rewards.keys() if groups[controlled_group] in agent},
-                      val={agent: values[agent] for agent in values.keys() if groups[controlled_group] in agent},
-                      logp={agent: log_probs[agent] for agent in log_probs.keys() if groups[controlled_group] in agent})
+            buf.store(obs={agent: obs[agent] for agent in obs.keys() if 'red' in agent},
+                      act={agent: actions[agent] for agent in actions.keys() if 'red' in agent},
+                      rew={agent: rewards[agent] for agent in rewards.keys() if 'red' in agent},
+                      val={agent: values[agent] for agent in values.keys() if 'red' in agent},
+                      logp={agent: log_probs[agent] for agent in log_probs.keys() if 'red' in agent})
 
-            steps_in_buffer += len([agent for agent in rewards.keys() if groups[controlled_group] in agent])
+            steps_in_buffer += len([agent for agent in rewards.keys() if 'red' in agent])
 
             # Update obs (critical!)
             obs = next_obs

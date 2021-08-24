@@ -48,6 +48,7 @@ def test_policy():
     for episode in range(args.test_episode):
         terminal = False
         ep_ret, ep_len = 0, 0
+        env.change_side()
         obs = env.reset()
         while not terminal:
             ally_actions, values, log_probs = ally_policy.choose_action({
@@ -58,7 +59,7 @@ def test_policy():
             actions = {**ally_actions, **enemy_actions}
 
             env.render()
-            time.sleep(0.1)
+            time.sleep(0.05)
             next_obs, rewards, done, _ = env.step(actions)
             ep_ret += sum([rewards[agent] for agent in rewards.keys() if groups[controlled_group] in agent])
             ep_len += 1

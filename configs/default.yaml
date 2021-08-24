@@ -10,6 +10,6 @@ hidden_dim: 128
 max_cycle: 120
 map_size: 16
 step_reward: -0.005
-dead_penalty: -0.1
-attack_penalty: -0
+dead_penalty: -2.5
+attack_penalty: -0.0
 attack_opponent_reward: 0.5

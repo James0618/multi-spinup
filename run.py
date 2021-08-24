@@ -24,7 +24,7 @@ def run():
 
 
 if __name__ == '__main__':
-    test = True
+    test = False
     if test:
         test_policy()
     else:

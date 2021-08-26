@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Preprocessor:
@@ -28,11 +29,12 @@ class GraphBuilder:
 
     def reset(self):
         self.adjacency_matrix = np.zeros((self.num_agents, self.num_agents), dtype=np.int)
-        self.distance_matrix = np.zeros((self.num_agents, self.num_agents), dtype=np.int)
+        self.distance_matrix = np.ones((self.num_agents, self.num_agents),
+                                       dtype=np.int) * self.args.communication_range + 1
         self.accessible_agents = {}
 
     def build_graph(self, positions):
-        for agent in self.possible_agents:
+        for agent in positions.keys():
             agent_id = self.possible_agents.index(agent)
             agent_position = positions[agent]
             for other_agent in positions.keys():
@@ -42,11 +44,20 @@ class GraphBuilder:
                     distance = max(abs(agent_position - other_agent_position))
                     self.distance_matrix[agent_id, other_agent_id] = distance
                     self.distance_matrix[other_agent_id, agent_id] = distance
-                else:
-                    self.distance_matrix[agent_id, agent_id] = self.args.communication_range + 1
 
         self._get_adjacency_matrix()
         self._get_accessible_agents(agents=list(positions.keys()))
+
+    def get_communication_topology(self, state, positions):
+        for agent in self.accessible_agents.keys():
+            agent_position = positions[agent]
+            for accessible_agent in self.accessible_agents[agent]:
+                accessible_agent_position = positions[accessible_agent]
+                plt.plot([agent_position[0], accessible_agent_position[0]],
+                         [agent_position[1], accessible_agent_position[1]], 'r')
+
+        plt.spy(state[:, :, 1].transpose())
+        plt.show()
 
     def _get_adjacency_matrix(self):
         self.adjacency_matrix = (self.distance_matrix <= self.args.communication_range).astype(np.int)

@@ -28,10 +28,15 @@ class BattleEnv:
             observations = self.env.reset()
 
         observations, positions = self.preprocessor.preprocess(observations=observations)
+
+        self.graph_builder.reset()
         self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'red' in key})
 
         if self.controlled_group == 'blue':
             return self._change_side(observations)
+
+        if self.args.plot_topology:
+            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
 
         return observations
 
@@ -48,7 +53,11 @@ class BattleEnv:
             return self._change_side(observations), self._change_side(rewards), self._change_side(done), \
                    self._change_side(infos)
 
+        self.graph_builder.reset()
         self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'red' in key})
+
+        if self.args.plot_topology:
+            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
 
         return observations, rewards, done, infos
 

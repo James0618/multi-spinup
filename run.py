@@ -25,6 +25,6 @@ def run():
 if __name__ == '__main__':
     test = True
     if test:
-        test_policy(date='08-21')
+        test_policy(date='08-24')
     else:
         run()

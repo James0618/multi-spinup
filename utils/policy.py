@@ -9,7 +9,7 @@ class Policy:
         self.policy = policy
         if actor_critic is None:
             self.character = 'enemy'
-            if policy is not 'random':
+            if policy != 'random':
                 self.set_enemy_model(policy)
         else:
             self.character = 'ally'

@@ -64,3 +64,6 @@ class BattleEnv:
             results[new_key] = variables[key]
 
         return results
+
+    def close(self):
+        self.env.close()

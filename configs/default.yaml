@@ -8,9 +8,10 @@ hidden_dim: 128
 
 # Environment Settings
 max_cycle: 120
-map_size: 12
+map_size: 40
 step_reward: -0.005
 dead_penalty: -1.0
 attack_penalty: -0.01
 attack_opponent_reward: 0.5
 enemy_policy: 'ppo'
+communication_range: 5

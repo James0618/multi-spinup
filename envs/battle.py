@@ -1,5 +1,5 @@
 from pettingzoo.magent import battle_v3
-from utils.preprocessor import Preprocessor
+from utils.preprocessor import Preprocessor, GraphBuilder
 
 
 class BattleEnv:
@@ -11,6 +11,10 @@ class BattleEnv:
                                           max_cycles=args.max_cycle, extra_features=False)
         self.preprocessor = Preprocessor(args=args)
         self.possible_agents = self.env.possible_agents
+
+        self.graph_builder = GraphBuilder(args=args, agents=[agent for agent in self.possible_agents if 'red' in agent])
+        self.graph_builder.reset()
+
         self.action_space = self.env.action_spaces[self.possible_agents[0]]
         self.observation_space = self.env.observation_spaces[self.possible_agents[0]]
         self.state_space = self.env.state_space
@@ -24,6 +28,7 @@ class BattleEnv:
             observations = self.env.reset()
 
         observations, positions = self.preprocessor.preprocess(observations=observations)
+        self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'red' in key})
 
         if self.controlled_group == 'blue':
             return self._change_side(observations)
@@ -39,8 +44,11 @@ class BattleEnv:
         observations, positions = self.preprocessor.preprocess(observations=observations)
 
         if self.controlled_group == 'blue':
+            self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'blue' in key})
             return self._change_side(observations), self._change_side(rewards), self._change_side(done), \
                    self._change_side(infos)
+
+        self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'red' in key})
 
         return observations, rewards, done, infos
 

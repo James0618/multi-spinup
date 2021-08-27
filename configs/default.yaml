@@ -16,3 +16,5 @@ attack_opponent_reward: 0.5
 enemy_policy: 'ppo'
 communication_range: 2
 plot_topology: False
+message_size: 3
+communicate: True

@@ -1,3 +1,4 @@
+import numpy as np
 from pettingzoo.magent import battle_v3
 from utils.preprocessor import Preprocessor, GraphBuilder
 
@@ -14,6 +15,7 @@ class BattleEnv:
 
         self.graph_builder = GraphBuilder(args=args, agents=[agent for agent in self.possible_agents if 'red' in agent])
         self.graph_builder.reset()
+        self.message = {agent: np.random.rand(args.message_size) for agent in self.possible_agents if 'red' in agent}
 
         self.action_space = self.env.action_spaces[self.possible_agents[0]]
         self.observation_space = self.env.observation_spaces[self.possible_agents[0]]
@@ -31,6 +33,8 @@ class BattleEnv:
 
         self.graph_builder.reset()
         self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'red' in key})
+        self.message = {agent: np.random.rand(self.args.message_size) for agent in self.possible_agents
+                        if 'red' in agent}
 
         if self.controlled_group == 'blue':
             return self._change_side(observations)
@@ -59,6 +63,9 @@ class BattleEnv:
         if self.args.plot_topology:
             self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
 
+        if self.args.communicate:
+            self.communicate(list(rewards.keys()))
+
         return observations, rewards, done, infos
 
     def render(self):
@@ -84,3 +91,11 @@ class BattleEnv:
 
     def close(self):
         self.env.close()
+
+    def communicate(self, agents):
+        accessible_agents = self.graph_builder.accessible_agents
+        for agent in agents:
+            agent_id = self.possible_agents.index(agent)
+            accessible_agent = accessible_agents[agent]
+
+

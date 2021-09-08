@@ -147,10 +147,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     # Set up experience buffer
     local_steps_per_epoch = int(steps_per_epoch / num_procs())
 
-    # default controlled group is red
-    groups = ['red', 'blue']
+    groups = ['omnivore']
     agents = env.possible_agents
-    agents = [agent for agent in agents if 'red' in agent]
     buf = buffer.PPOBuffer(obs_shape=obs_shape, n_actions=n_actions, max_agents=len(agents), max_cycle=args.max_cycle,
                            buffer_size=local_steps_per_epoch, agents=agents)
 
@@ -230,35 +228,24 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Prepare for interaction with environment
     start_time = time.time()
-    obs, ep_ret, ep_len = env.reset(first_time=True), 0, 0
+    obs, ep_ret, ep_len = env.reset(), 0, 0
 
     ally_policy = policy.Policy(args=args, actor_critic=ac)
-    enemy_policy = policy.Policy(args=args, actor_critic=None, policy=args.enemy_policy)
 
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         steps_in_buffer = 0
-        env.change_side()
         while steps_in_buffer < local_steps_per_epoch:
-            ally_actions, values, log_probs = ally_policy.choose_action({
-                key: obs[key] for key in obs.keys() if 'red' in key})
-            enemy_actions, _, _ = enemy_policy.choose_action({
-                key: obs[key] for key in obs.keys() if 'blue' in key})
-
-            actions = {**ally_actions, **enemy_actions}
+            actions, values, log_probs = ally_policy.choose_action(obs)
 
             next_obs, rewards, done, _ = env.step(actions)
-            ep_ret += sum([rewards[agent] for agent in rewards.keys() if 'red' in agent])
+            ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
 
             # save and log
-            buf.store(obs={agent: obs[agent] for agent in obs.keys() if 'red' in agent},
-                      act={agent: actions[agent] for agent in actions.keys() if 'red' in agent},
-                      rew={agent: rewards[agent] for agent in rewards.keys() if 'red' in agent},
-                      val={agent: values[agent] for agent in values.keys() if 'red' in agent},
-                      logp={agent: log_probs[agent] for agent in log_probs.keys() if 'red' in agent})
+            buf.store(obs=obs, act=actions, rew=rewards, val=values, logp=log_probs)
 
-            steps_in_buffer += len([agent for agent in rewards.keys() if 'red' in agent])
+            steps_in_buffer += len(rewards.keys())
 
             # Update obs (critical!)
             obs = next_obs

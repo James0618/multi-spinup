@@ -12,17 +12,19 @@ from pettingzoo.utils.conversions import from_parallel_wrapper
 from gym.utils import EzPickle
 
 
-map_size = 200
+map_size_default = 200
 max_cycles_default = 500
+view_range_default = 7
 KILL_REWARD = 5
 minimap_mode_default = False
 default_reward_args = dict(step_reward=-0.01, attack_penalty=-0.1, dead_penalty=-1, attack_food_reward=0.5)
 
 
-def parallel_env(max_cycles=max_cycles_default, minimap_mode=minimap_mode_default, extra_features=False, **reward_args):
+def parallel_env(map_size=map_size_default, max_cycles=max_cycles_default, minimap_mode=minimap_mode_default,
+                 view_range=view_range_default, extra_features=False, **reward_args):
     env_reward_args = dict(**default_reward_args)
     env_reward_args.update(reward_args)
-    return _parallel_env(map_size, minimap_mode, env_reward_args, max_cycles, extra_features)
+    return _parallel_env(map_size, minimap_mode, view_range, env_reward_args, max_cycles, extra_features)
 
 
 def raw_env(max_cycles=max_cycles_default, minimap_mode=minimap_mode_default, extra_features=False, **reward_args):
@@ -32,16 +34,16 @@ def raw_env(max_cycles=max_cycles_default, minimap_mode=minimap_mode_default, ex
 env = make_env(raw_env)
 
 
-def load_config(size, minimap_mode, step_reward, attack_penalty, dead_penalty, attack_food_reward):
+def load_config(map_size, minimap_mode, view_range, step_reward, attack_penalty, dead_penalty, attack_food_reward):
     gw = magent.gridworld
     cfg = gw.Config()
 
-    cfg.set({"map_width": size, "map_height": size})
+    cfg.set({"map_width": map_size, "map_height": map_size})
     cfg.set({"minimap_mode": minimap_mode})
 
     options = {
         'width': 1, 'length': 1, 'hp': 3, 'speed': 3,
-        'view_range': gw.CircleRange(7), 'attack_range': gw.CircleRange(1),
+        'view_range': gw.CircleRange(view_range), 'attack_range': gw.CircleRange(1),
         'damage': 6, 'step_recover': 0, 'attack_in_group': 1,
         'step_reward': step_reward, 'attack_penalty': attack_penalty, 'dead_penalty': dead_penalty
     }
@@ -72,9 +74,9 @@ def load_config(size, minimap_mode, step_reward, attack_penalty, dead_penalty, a
 class _parallel_env(magent_parallel_env, EzPickle):
     metadata = {'render.modes': ['human', 'rgb_array'], 'name': "gather_v3"}
 
-    def __init__(self, map_size, minimap_mode, reward_args, max_cycles, extra_features):
+    def __init__(self, map_size, minimap_mode, view_range, reward_args, max_cycles, extra_features):
         EzPickle.__init__(self, map_size, minimap_mode, reward_args, max_cycles, extra_features)
-        env = magent.GridWorld(load_config(map_size, minimap_mode, **reward_args))
+        env = magent.GridWorld(load_config(map_size, minimap_mode, view_range, **reward_args))
         handles = env.get_handles()
         reward_vals = np.array([5] + list(reward_args.values()))
         reward_range = [np.minimum(reward_vals, 0).sum(), np.maximum(reward_vals, 0).sum()]
@@ -156,8 +158,8 @@ class _parallel_env(magent_parallel_env, EzPickle):
 
             env.add_agents(food_handle, method="custom", pos=pos)
 
-        scale = 1
-        w, h = len(legend), len(legend[0])
-        offset = -3
-        draw(offset + map_size // 2 - w // 2 * scale, map_size // 2 - h // 2 * scale, scale, legend)
-        draw(offset + map_size // 2 - w // 2 * scale + len(legend), map_size // 2 - h // 2 * scale, scale, org)
+        # scale = 1
+        # w, h = len(legend), len(legend[0])
+        # offset = -3
+        # draw(offset + map_size // 2 - w // 2 * scale, map_size // 2 - h // 2 * scale, scale, legend)
+        # draw(offset + map_size // 2 - w // 2 * scale + len(legend), map_size // 2 - h // 2 * scale, scale, org)

@@ -10,7 +10,7 @@ from utils.test_battle_policy import test_policy
 def run(exp_name='ppo'):
     default_args = load_default_config('battle')
     default_env = BattleEnv(args=default_args)
-    args = load_config(name='test', env=default_env)
+    args = load_config(name='battle', env=default_env)
 
     mpi_fork(args.cpu)  # run parallel code with mpi
 
@@ -24,7 +24,7 @@ def run(exp_name='ppo'):
 
 
 if __name__ == '__main__':
-    test = True
+    test = False
     t = time.localtime(time.time())
     experiment = 'battle-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
     if test:

@@ -4,11 +4,11 @@ from spinup.utils.mpi_tools import mpi_fork
 from algos.ppo_gather import ppo
 from configs.load_config import load_config, load_default_config
 from envs.battle import BattleEnv
-from utils.test_policy import test_policy
+from utils.test_battle_policy import test_policy
 
 
 def run(exp_name='ppo'):
-    default_args = load_default_config('test')
+    default_args = load_default_config('gather')
     default_env = BattleEnv(args=default_args)
     args = load_config(name='test', env=default_env)
 

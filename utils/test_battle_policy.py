@@ -37,9 +37,9 @@ def test_policy(date):
     args = parser.parse_args()
 
     actor_critic = load_model(args=args)
-    env_args = load_default_config('test')
+    env_args = load_default_config('battle')
     env = BattleEnv(args=env_args)
-    run_args = load_config('test', env)
+    run_args = load_config('battle', env)
 
     groups = ['red', 'blue']
     controlled_group = 0

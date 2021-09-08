@@ -4,7 +4,7 @@ import argparse
 from torch.optim import Adam
 import time
 from utils import core, policy, buffer
-from envs.battle import BattleEnv
+from envs.gather import GatherEnv
 from configs.load_config import load_config, load_default_config
 from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
@@ -34,35 +34,29 @@ def test_policy(experiment):
     args = parser.parse_args()
 
     actor_critic = load_model(args=args)
-    env_args = load_default_config('battle')
-    env = BattleEnv(args=env_args)
-    run_args = load_config('battle', env)
+    env_args = load_default_config('gather')
+    env = GatherEnv(args=env_args)
+    run_args = load_config('gather', env)
 
-    groups = ['red', 'blue']
+    groups = ['omnivore']
     controlled_group = 0
 
     ally_policy = policy.Policy(args=run_args, actor_critic=actor_critic)
-    enemy_policy = policy.Policy(args=run_args, actor_critic=None, policy=run_args.enemy_policy)
 
     # Main loop: collect experience in env and update/log each epoch
-    obs = env.reset(first_time=True)
+    obs = env.reset()
     for episode in range(args.test_episode):
         terminal = False
         ep_ret, ep_len = 0, 0
         # env.change_side()
         obs = env.reset()
         while not terminal:
-            ally_actions, values, log_probs = ally_policy.choose_action({
-                key: obs[key] for key in obs.keys() if groups[controlled_group] in key})
-            enemy_actions, _, _ = enemy_policy.choose_action({
-                key: obs[key] for key in obs.keys() if groups[1 - controlled_group] in key})
-
-            actions = {**ally_actions, **enemy_actions}
+            actions, values, log_probs = ally_policy.choose_action(obs)
 
             env.render()
             # time.sleep(0.05)
             next_obs, rewards, done, _ = env.step(actions)
-            ep_ret += sum([rewards[agent] for agent in rewards.keys() if groups[controlled_group] in agent])
+            ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
 
             # Update obs (critical!)

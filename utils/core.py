@@ -205,5 +205,3 @@ class CNNActorCritic(nn.Module):
 
     def act(self, obs):
         return self.step(obs)[0]
-
-

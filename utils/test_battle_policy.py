@@ -26,13 +26,10 @@ def load_model(args):
     return actor_critic
 
 
-def test_policy(date):
+def test_policy(experiment):
     parser = argparse.ArgumentParser()
-    if date is None:
-        parser.add_argument('--path', type=str, default='/home/drl/PycharmProjects/multi-spinup/results/ppo')
-    else:
-        parser.add_argument('--path', type=str, default='/home/drl/PycharmProjects/multi-spinup/results/ppo-{}'.format(
-            date))
+    parser.add_argument('--path', type=str, default='/home/drl/PycharmProjects/multi-spinup/results/{}'.format(
+        experiment))
     parser.add_argument('--test_episode', type=int, default=10)
     args = parser.parse_args()
 

@@ -11,7 +11,7 @@ class Preprocessor:
         # observation: dict
         result, positions = {}, {}
         for key, value in observations.items():
-            image = value.transpose(2, 0, 1)
+            image = value[:, :, [0, 1, 2, 4, 5, 7, 8]].transpose(2, 0, 1)
             position = value[0, 0, 7:]
 
             result[key] = torch.from_numpy(image)

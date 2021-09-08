@@ -4,7 +4,7 @@ from spinup.utils.mpi_tools import mpi_fork
 from algos.ppo_gather import ppo
 from configs.load_config import load_config, load_default_config
 from envs.gather import GatherEnv
-from utils.test_battle_policy import test_policy
+from utils.test_gather_policy import test_policy
 
 
 def run(exp_name='ppo'):
@@ -28,6 +28,6 @@ if __name__ == '__main__':
     t = time.localtime(time.time())
     experiment = 'gather-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
     if test:
-        test_policy(date='08-24')
+        test_policy(experiment=experiment)
     else:
         run(exp_name=experiment)

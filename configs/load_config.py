@@ -39,7 +39,7 @@ def load_config(name, env):
     n_actions = env.action_space.n
 
     temp = torch.zeros(3).type(torch.int)
-    temp[0], temp[1], temp[2] = int(observation_shape[2]), int(observation_shape[0]), int(observation_shape[1])
+    temp[0], temp[1], temp[2] = int(observation_shape[2] - 2), int(observation_shape[0]), int(observation_shape[1])
     image_shape = torch.Size(temp)
     embed_shape = torch.Size([2 + n_actions])
     input_shape = [image_shape, embed_shape]

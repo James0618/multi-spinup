@@ -67,3 +67,16 @@ class GraphBuilder:
             agent_id = self.possible_agents.index(agent)
             accessible_agents_id = self.adjacency_matrix[agent_id].nonzero()[0].tolist()
             self.accessible_agents[agent] = [self.possible_agents[i] for i in accessible_agents_id]
+
+    def _get_high_level_agent(self):
+        accessible_numbers = {}
+        levels = {}
+        for agent in self.accessible_agents.keys():
+            accessible_num = len(self.accessible_agents[agent])
+            accessible_numbers[agent] = accessible_num
+            levels[agent] = 0
+
+        for agent in self.accessible_agents.keys():
+            temp = [accessible_numbers[other_agent] for other_agent in self.accessible_agents[agent]]
+
+

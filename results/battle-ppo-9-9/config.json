@@ -1,0 +1,84 @@
+{
+    "actor_critic":	"CNNActorCritic",
+    "args":	{
+        "namespace(attack_opponent_reward=0.5, attack_penalty=-0.01, communicate=False, communication_range=2, cpu=1, dead_penalty=-1.0, enemy_policy='ppo', epochs=500, gamma=0.995, hidden_dim=128, input_shape=[torch.Size([7, 13, 13]), torch.Size([23])], map_size=25, max_agents={'red': 20, 'blue': 20}, max_cycle=120, message_size=5, n_actions=21, observation_shape=torch.Size([7, 13, 13]), plot_topology=False, seed=0, state_shape=torch.Size([3, 25, 25]), step_reward=-0.005, steps_per_epoch=32000, view_range=6)":	{
+            "attack_opponent_reward":	0.5,
+            "attack_penalty":	-0.01,
+            "communicate":	false,
+            "communication_range":	2,
+            "cpu":	1,
+            "dead_penalty":	-1.0,
+            "enemy_policy":	"ppo",
+            "epochs":	500,
+            "gamma":	0.995,
+            "hidden_dim":	128,
+            "input_shape":	[
+                [
+                    7,
+                    13,
+                    13
+                ],
+                [
+                    23
+                ]
+            ],
+            "map_size":	25,
+            "max_agents":	{
+                "blue":	"20",
+                "red":	"20"
+            },
+            "max_cycle":	120,
+            "message_size":	5,
+            "n_actions":	"21",
+            "observation_shape":	[
+                7,
+                13,
+                13
+            ],
+            "plot_topology":	false,
+            "seed":	0,
+            "state_shape":	[
+                3,
+                25,
+                25
+            ],
+            "step_reward":	-0.005,
+            "steps_per_epoch":	32000,
+            "view_range":	6
+        }
+    },
+    "clip_ratio":	0.2,
+    "env_fn":	"<function run.<locals>.<lambda> at 0x7ff5421d8d08>",
+    "epochs":	500,
+    "exp_name":	"battle-ppo-9-9",
+    "gamma":	0.995,
+    "lam":	0.97,
+    "logger":	{
+        "<spinup.utils.logx.EpochLogger object at 0x7ff54218b630>":	{
+            "epoch_dict":	{},
+            "exp_name":	"battle-ppo-9-9",
+            "first_row":	true,
+            "log_current_row":	{},
+            "log_headers":	[],
+            "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-9",
+            "output_file":	{
+                "<_io.TextIOWrapper name='/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-9/progress.txt' mode='w' encoding='UTF-8'>":	{
+                    "mode":	"w"
+                }
+            }
+        }
+    },
+    "logger_kwargs":	{
+        "exp_name":	"battle-ppo-9-9",
+        "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-9"
+    },
+    "max_ep_len":	1000,
+    "pi_lr":	0.0004,
+    "save_freq":	10,
+    "seed":	0,
+    "steps_per_epoch":	32000,
+    "target_kl":	0.01,
+    "train_pi_iters":	50,
+    "train_v_iters":	50,
+    "vf_lr":	0.0008
+}

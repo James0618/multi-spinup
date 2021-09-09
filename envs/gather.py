@@ -34,7 +34,8 @@ class GatherEnv:
         self.message = {agent: np.random.rand(self.args.message_size) for agent in self.possible_agents}
 
         if self.args.plot_topology:
-            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
+            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions,
+                                                          controlled_group=self.controlled_group)
 
         return observations
 
@@ -48,7 +49,8 @@ class GatherEnv:
         self.graph_builder.build_graph(positions=positions)
 
         if self.args.plot_topology:
-            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
+            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions,
+                                                          controlled_group=self.controlled_group)
 
         if self.args.communicate:
             for i in range(100):

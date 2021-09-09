@@ -34,13 +34,21 @@ class BattleEnv:
 
         observations, positions = self.preprocessor.preprocess(observations=observations)
 
+        if self.controlled_group == 'blue':
+            self.graph_builder.reset()
+            self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'blue' in key})
+            self.message = {agent: np.random.rand(self.args.message_size) for agent in self.possible_agents
+                            if 'blue' in agent}
+
+            if self.args.plot_topology:
+                self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
+
+            return self._change_side(observations)
+
         self.graph_builder.reset()
         self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'red' in key})
         self.message = {agent: np.random.rand(self.args.message_size) for agent in self.possible_agents
                         if 'red' in agent}
-
-        if self.controlled_group == 'blue':
-            return self._change_side(observations)
 
         if self.args.plot_topology:
             self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
@@ -56,6 +64,15 @@ class BattleEnv:
         observations, positions = self.preprocessor.preprocess(observations=observations)
 
         if self.controlled_group == 'blue':
+            if self.args.plot_topology:
+                self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions,
+                                                              controlled_group=self.controlled_group)
+
+            if self.args.communicate:
+                for i in range(100):
+                    self.communicate([agent for agent in rewards.keys() if 'blue' in agent])
+
+            self.graph_builder.reset()
             self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'blue' in key})
             return self._change_side(observations), self._change_side(rewards), self._change_side(done), \
                    self._change_side(infos)
@@ -64,7 +81,8 @@ class BattleEnv:
         self.graph_builder.build_graph(positions={key: positions[key] for key in positions.keys() if 'red' in key})
 
         if self.args.plot_topology:
-            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions)
+            self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions,
+                                                              controlled_group=self.controlled_group)
 
         if self.args.communicate:
             for i in range(100):
@@ -80,6 +98,11 @@ class BattleEnv:
             self.controlled_group = 'blue'
         else:
             self.controlled_group = 'red'
+
+        if self.controlled_group == 'blue':
+            self.graph_builder.change_side(agents=[agent for agent in self.possible_agents if 'blue' in agent])
+        else:
+            self.graph_builder.change_side(agents=[agent for agent in self.possible_agents if 'red' in agent])
 
     def _change_side(self, variables):
         results = {}

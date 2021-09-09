@@ -33,6 +33,9 @@ class GraphBuilder:
                                        dtype=np.int) * self.args.communication_range + 1
         self.accessible_agents = {}
 
+    def change_side(self, agents):
+        self.possible_agents = agents
+
     def build_graph(self, positions):
         for agent in positions.keys():
             agent_id = self.possible_agents.index(agent)
@@ -48,7 +51,7 @@ class GraphBuilder:
         self._get_adjacency_matrix()
         self._get_accessible_agents(agents=list(positions.keys()))
 
-    def get_communication_topology(self, state, positions):
+    def get_communication_topology(self, state, positions, controlled_group):
         for agent in self.accessible_agents.keys():
             agent_position = positions[agent]
             for accessible_agent in self.accessible_agents[agent]:
@@ -56,8 +59,12 @@ class GraphBuilder:
                 plt.plot([agent_position[0], accessible_agent_position[0]],
                          [agent_position[1], accessible_agent_position[1]], 'r')
 
-        plt.spy(state[:, :, 1].transpose())
-        plt.show()
+        if controlled_group == 'red':
+            plt.spy(state[:, :, 1].transpose())
+            plt.show()
+        else:
+            plt.spy(state[:, :, 3].transpose())
+            plt.show()
 
     def _get_adjacency_matrix(self):
         self.adjacency_matrix = (self.distance_matrix <= self.args.communication_range).astype(np.int)

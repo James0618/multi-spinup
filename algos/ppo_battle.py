@@ -238,7 +238,6 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         steps_in_buffer = 0
-        env.change_side()
         while steps_in_buffer < local_steps_per_epoch:
             ally_actions, values, log_probs = ally_policy.choose_action({
                 key: obs[key] for key in obs.keys() if 'red' in key})
@@ -282,6 +281,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
+
+                env.change_side()
                 obs, ep_ret, ep_len = env.reset(), 0, 0
 
         # Save model

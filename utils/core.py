@@ -143,16 +143,17 @@ def cnn(args):
         nn.ReLU(),
     )
 
-    return cnn_layer
+    output_size = int((image_shape[1] - 2) / 2) - 2
+    return cnn_layer, output_size
 
 
 class CNNActor(Actor):
     def __init__(self, args):
         super(CNNActor, self).__init__()
         self.args = args
-        self.feature_net = cnn(args)
+        self.feature_net, self.cnn_output_size = cnn(args)
         self.logits_net = nn.Sequential(
-            nn.Linear(64 * 3 * 3, args.hidden_dim),
+            nn.Linear(64 * self.cnn_output_size * self.cnn_output_size, args.hidden_dim),
             nn.ReLU(),
             nn.Linear(args.hidden_dim, args.n_actions),
         )
@@ -173,9 +174,9 @@ class CNNCritic(nn.Module):
     def __init__(self, args):
         super(CNNCritic, self).__init__()
         self.args = args
-        self.feature_net = cnn(args)
+        self.feature_net, self.cnn_output_size = cnn(args)
         self.v_net = nn.Sequential(
-            nn.Linear(64 * 3 * 3, args.hidden_dim),
+            nn.Linear(64 * self.cnn_output_size * self.cnn_output_size, args.hidden_dim),
             nn.ReLU(),
             nn.Linear(args.hidden_dim, 1),
         )

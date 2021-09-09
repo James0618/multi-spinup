@@ -13,4 +13,4 @@ attack_opponent_reward: 0.5
 enemy_policy: 'ppo'
 communication_range: 2
 message_size: 5
-view_range: 6
+view_range: 7

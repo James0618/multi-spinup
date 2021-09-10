@@ -42,6 +42,7 @@ def test_policy(experiment):
     controlled_group = 0
 
     ally_policy = policy.Policy(args=run_args, actor_critic=actor_critic)
+    # ally_policy = policy.Policy(args=run_args, actor_critic=None, policy='ppo-v1')
     enemy_policy = policy.Policy(args=run_args, actor_critic=None, policy=run_args.enemy_policy)
 
     # Main loop: collect experience in env and update/log each epoch
@@ -49,7 +50,7 @@ def test_policy(experiment):
     for episode in range(args.test_episode):
         terminal = False
         ep_ret, ep_len = 0, 0
-        # env.change_side()
+        env.change_side()
         obs = env.reset()
         while not terminal:
             ally_actions, values, log_probs = ally_policy.choose_action({

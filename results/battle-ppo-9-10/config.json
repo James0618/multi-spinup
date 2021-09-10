@@ -48,29 +48,29 @@
         }
     },
     "clip_ratio":	0.2,
-    "env_fn":	"<function run.<locals>.<lambda> at 0x7fa14d427e18>",
+    "env_fn":	"<function run.<locals>.<lambda> at 0x7fafbac2de18>",
     "epochs":	500,
-    "exp_name":	"battle-ppo-9-9",
+    "exp_name":	"battle-ppo-9-10",
     "gamma":	0.995,
     "lam":	0.97,
     "logger":	{
-        "<spinup.utils.logx.EpochLogger object at 0x7fa14d44fc50>":	{
+        "<spinup.utils.logx.EpochLogger object at 0x7fafbac56c18>":	{
             "epoch_dict":	{},
-            "exp_name":	"battle-ppo-9-9",
+            "exp_name":	"battle-ppo-9-10",
             "first_row":	true,
             "log_current_row":	{},
             "log_headers":	[],
-            "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-9",
+            "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-10",
             "output_file":	{
-                "<_io.TextIOWrapper name='/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-9/progress.txt' mode='w' encoding='UTF-8'>":	{
+                "<_io.TextIOWrapper name='/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-10/progress.txt' mode='w' encoding='UTF-8'>":	{
                     "mode":	"w"
                 }
             }
         }
     },
     "logger_kwargs":	{
-        "exp_name":	"battle-ppo-9-9",
-        "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-9"
+        "exp_name":	"battle-ppo-9-10",
+        "output_dir":	"/home/drl/PycharmProjects/multi-spinup/results/battle-ppo-9-10"
     },
     "max_ep_len":	1000,
     "pi_lr":	0.0004,

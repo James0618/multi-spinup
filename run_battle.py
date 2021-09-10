@@ -24,9 +24,9 @@ def run(exp_name='ppo'):
 
 
 if __name__ == '__main__':
-    test = False
+    test = True
     t = time.localtime(time.time())
-    experiment = 'battle-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
+    experiment = 'battle-ppo-{}-{}'.format(t.tm_mon, t.tm_mday-1)
     if test:
         test_policy(experiment=experiment)
     else:

@@ -6,7 +6,7 @@ epochs: 500
 # Environment Settings
 max_cycle: 120
 map_size: 40
-step_reward: -0.005
+step_reward: -0.05
 dead_penalty: -0.5
 attack_penalty: -0.1
 attack_food_reward: 1.0

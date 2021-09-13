@@ -151,7 +151,7 @@ class CNNActor(Actor):
     def __init__(self, args):
         super(CNNActor, self).__init__()
         self.args = args
-        self.feature_net, self.cnn_output_size = cnn(args)
+        # self.feature_net, self.cnn_output_size = cnn(args)
         self.logits_net = nn.Sequential(
             nn.Linear(64 * self.cnn_output_size * self.cnn_output_size, args.hidden_dim),
             nn.ReLU(),

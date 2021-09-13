@@ -131,7 +131,11 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Instantiate environment
     env: BattleEnv = env_fn()
-    obs_shape = args.observation_shape
+    if args.vae_model:
+        obs_shape = torch.Size([args.vae_observation_dim])
+    else:
+        obs_shape = args.observation_shape
+
     n_actions = args.n_actions
 
     # Create actor-critic module

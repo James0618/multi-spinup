@@ -151,7 +151,7 @@ class CNNActor(Actor):
     def __init__(self, args):
         super(CNNActor, self).__init__()
         self.args = args
-        # self.feature_net, self.cnn_output_size = cnn(args)
+        self.feature_net, self.cnn_output_size = cnn(args)
         self.logits_net = nn.Sequential(
             nn.Linear(64 * self.cnn_output_size * self.cnn_output_size, args.hidden_dim),
             nn.ReLU(),
@@ -174,7 +174,7 @@ class CNNCritic(nn.Module):
     def __init__(self, args):
         super(CNNCritic, self).__init__()
         self.args = args
-        self.feature_net, self.cnn_output_size = cnn(args)
+        # self.feature_net, self.cnn_output_size = cnn(args)
         self.v_net = nn.Sequential(
             nn.Linear(64 * self.cnn_output_size * self.cnn_output_size, args.hidden_dim),
             nn.ReLU(),
@@ -195,6 +195,58 @@ class CNNActorCritic(nn.Module):
         self.args = args
         self.pi = CNNActor(args=args)
         self.v = CNNCritic(args=args)
+
+    def step(self, obs):
+        with torch.no_grad():
+            pi = self.pi._distribution(obs)
+            a = pi.sample()
+            logp_a = self.pi._log_prob_from_distribution(pi, a)
+            v = self.v(obs)
+        return a, v, logp_a
+
+    def act(self, obs):
+        return self.step(obs)[0]
+
+
+class VAEActor(Actor):
+    def __init__(self, args):
+        super(VAEActor, self).__init__()
+        self.args = args
+        self.logits_net = nn.Sequential(
+            nn.Linear(args.vae_observation_dim, args.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(args.hidden_dim, args.n_actions),
+        )
+
+    def _distribution(self, obs):
+        logits = self.logits_net(obs)
+        return Categorical(logits=logits)
+
+    def _log_prob_from_distribution(self, pi, act):
+        return pi.log_prob(act)
+
+
+class VAECritic(nn.Module):
+    def __init__(self, args):
+        super(VAECritic, self).__init__()
+        self.args = args
+        # self.feature_net, self.cnn_output_size = cnn(args)
+        self.v_net = nn.Sequential(
+            nn.Linear(args.vae_observation_dim, args.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(args.hidden_dim, 1),
+        )
+
+    def forward(self, obs):
+        return torch.squeeze(self.v_net(obs), -1)  # Critical to ensure v has right shape.
+
+
+class VAEActorCritic(nn.Module):
+    def __init__(self, args):
+        super(VAEActorCritic, self).__init__()
+        self.args = args
+        self.pi = VAEActor(args=args)
+        self.v = VAECritic(args=args)
 
     def step(self, obs):
         with torch.no_grad():

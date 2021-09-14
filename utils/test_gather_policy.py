@@ -39,7 +39,6 @@ def test_policy(experiment):
     run_args = load_config('gather', env)
 
     groups = ['omnivore']
-    controlled_group = 0
 
     ally_policy = policy.Policy(args=run_args, actor_critic=actor_critic)
 
@@ -48,7 +47,6 @@ def test_policy(experiment):
     for episode in range(args.test_episode):
         terminal = False
         ep_ret, ep_len = 0, 0
-        # env.change_side()
         obs = env.reset()
         while not terminal:
             actions, values, log_probs = ally_policy.choose_action(obs)

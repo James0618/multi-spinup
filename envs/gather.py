@@ -59,7 +59,8 @@ class GatherEnv:
         return observations, rewards, done, infos
 
     def render(self):
-        self.env.render()
+        for i in range(3):
+            self.env.render()
 
     def close(self):
         self.env.close()

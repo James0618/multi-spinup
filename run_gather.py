@@ -29,10 +29,10 @@ def run(exp_name='ppo'):
 
 
 if __name__ == '__main__':
-    test = True
+    test = False
     t = time.localtime(time.time())
     experiment = 'gather-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
-    # experiment = 'gather-ppo-{}-{}'.format(9, 9)
+    # experiment = 'gather-ppo-{}-{}'.format(9, 23)
     if test:
         test_policy(experiment=experiment)
     else:

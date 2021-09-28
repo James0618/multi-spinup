@@ -122,7 +122,9 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Set up logger and save configuration
     logger = EpochLogger(**logger_kwargs)
-    logger.save_config(locals())
+    temp = locals()
+    inputs = {key: temp[key] for key in temp if type(temp[key]) is float or type(temp[key]) is int}
+    logger.save_config(inputs)
 
     # Random seed
     seed += 10000 * proc_id()

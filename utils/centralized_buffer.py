@@ -19,6 +19,7 @@ class PPOCentralizedBuffer:
         self.logp_buf, self.ret_buf, self.rew_buf, self.alive_buf = None, None, None, None
 
         self.ptr, self.path_start_idx = 0, 0
+        self.reset()
 
     def reset(self):
         self.obs_buf = torch.zeros(self.buffer_size, self.max_agents, *self.obs_shape)
@@ -74,10 +75,12 @@ class PPOCentralizedBuffer:
 
         # the next two lines implement GAE-Lambda advantage calculation
         deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
-        self.adv_buf[path_slice] = core.discount_cumsum(deltas, self.gamma * self.lam)
+        self.adv_buf[path_slice] = torch.from_numpy(np.ascontiguousarray(
+            core.discount_cumsum(deltas, self.gamma * self.lam)).squeeze())
 
         # the next line computes rewards-to-go, to be targets for the value function
-        self.ret_buf[path_slice] = core.discount_cumsum(rews, self.gamma)[:-1]
+        self.ret_buf[path_slice] = torch.from_numpy(np.ascontiguousarray(
+            core.discount_cumsum(rews, self.gamma)[:-1]).squeeze())
 
         self.path_start_idx = self.ptr
 
@@ -87,7 +90,7 @@ class PPOCentralizedBuffer:
         the buffer, with advantages appropriately normalized (shifted to have
         mean zero and std one). Also, resets some pointers in the buffer.
         """
-        assert self.ptr == self.max_size  # buffer has to be full before you can get
+        assert self.ptr == self.buffer_size  # buffer has to be full before you can get
         self.ptr, self.path_start_idx = 0, 0
         # the next two lines implement the advantage normalization trick
         adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)

@@ -266,12 +266,9 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
                     pass
                 # if trajectory didn't reach terminal state, bootstrap value target
                 if epoch_ended:
-                    v = {agent: 0 for agent in env.possible_agents}
-                    _, temp, _ = ally_policy.choose_action(obs)
-                    for v_key in temp.keys():
-                        v[v_key] = temp[v_key]
+                    _, v, _ = ally_policy.choose_action(obs)
                 else:
-                    v = {agent: 0 for agent in env.possible_agents}
+                    v = 0
                 buf.finish_path(v)
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished

@@ -27,14 +27,20 @@ class Policy:
                     actions[key], values[key], log_probs[key] = action, value, log_prob
 
         else:
-            for key in observations.keys():
-                action, value, log_prob = self.ppo_action(observation=observations[key])
-                actions[key], values[key], log_probs[key] = action, value, log_prob
+            if self.args.centralized:
+                actions, values, log_probs = self.centralized_ppo_action(observations=observations)
+            else:
+                for key in observations.keys():
+                    action, value, log_prob = self.ppo_action(observation=observations[key])
+                    actions[key], values[key], log_probs[key] = action, value, log_prob
 
         return actions, values, log_probs
 
     def ppo_action(self, observation):
         return self.actor_critic.step(observation)
+
+    def centralized_ppo_action(self, observations):
+        return self.actor_critic.step(observations)
 
     def random_actions(self):
         action = np.random.randint(0, self.args.n_actions)

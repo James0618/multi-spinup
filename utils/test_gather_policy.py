@@ -26,7 +26,7 @@ def load_model(args):
     return actor_critic
 
 
-def test_policy(experiment):
+def test_policy(experiment, config_name):
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default='/home/drl/PycharmProjects/multi-spinup/results/{}'.format(
         experiment))
@@ -34,9 +34,9 @@ def test_policy(experiment):
     args = parser.parse_args()
 
     actor_critic = load_model(args=args)
-    env_args = load_default_config('gather')
+    env_args = load_default_config(config_name)
     env = GatherEnv(args=env_args)
-    run_args = load_config('gather', env)
+    run_args = load_config(config_name, env)
 
     groups = ['omnivore']
 

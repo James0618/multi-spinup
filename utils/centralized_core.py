@@ -134,8 +134,28 @@ class EstimationNet(torch.nn.Module):
 
         self.lin1 = torch.nn.Linear(self.nhid * 2, self.nhid)
 
-    def forward(self, data):
-        x, edge_index, batch = data.x, data.edge_index, data.batch
+    def forward(self, obs, is_alive):
+        numbers = int(is_alive.sum())
+        if len(obs.shape) == 2:
+            obs = obs.unsqueeze(0)
+            is_alive = is_alive.unsqueeze(0)
+
+        x = torch.zeros(numbers, obs.shape[2])
+        batch = torch.zeros(numbers, obs.shape[2])
+        edge_index = torch.zeros(numbers * 2, 2)
+
+        batch_ptr = 0
+        for i in range(numbers):
+            agent_number = int(is_alive[i].sum())
+            fill_slice = slice(batch_ptr, batch_ptr + agent_number)
+
+            x[fill_slice] = obs[i][is_alive[i] == 1]
+            batch[fill_slice] = torch.ones(agent_number) * i
+
+            edge_index[batch_ptr * 2: batch_ptr * 2 + agent_number, 1] = torch.arange(agent_number)
+            edge_index[batch_ptr * 2 + agent_number: (batch_ptr + agent_number) * 2, 0] = torch.arange(agent_number)
+
+            batch_ptr += agent_number
 
         x = F.relu(self.conv1(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)

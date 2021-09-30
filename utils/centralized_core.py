@@ -81,26 +81,44 @@ class VAEActor(Actor):
 
 
 class CentralizedCritic(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, agents):
         super(CentralizedCritic, self).__init__()
         self.args = args
+        self.possible_agents = agents
         # self.feature_net, self.cnn_output_size = cnn(args)
         self.v_net = nn.Sequential(
-            nn.Linear(args.vae_observation_dim, args.hidden_dim),
+            nn.Linear(args.nhid, args.hidden_dim),
             nn.ReLU(),
             nn.Linear(args.hidden_dim, 1),
         )
+        self.state_net = EstimationNet(args=args)
 
-    def forward(self, obs):
-        return torch.squeeze(self.v_net(list(obs.values())[0]), -1)
+    def forward(self, obs, is_alive=None):
+        if type(obs) == dict:
+            # the type of obs is dict
+            agent_number = len(self.possible_agents)
+            obs_tensor = torch.zeros(agent_number, self.args.vae_observation_dim)
+            for i, agent in enumerate(self.possible_agents):
+                if agent in obs.keys():
+                    obs_tensor[i] = obs[agent]
+            is_alive = torch.ones(agent_number)
+            state = self.state_net(obs_tensor, is_alive).squeeze()
+
+            return self.v_net(state)
+
+        else:
+            state = self.state_net(obs, is_alive).squeeze()
+
+            return self.v_net(state)
 
 
 class VAEActorCritic(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, agents):
         super(VAEActorCritic, self).__init__()
         self.args = args
+        self.possible_agents = agents
         self.pi = VAEActor(args=args)
-        self.v = CentralizedCritic(args=args)
+        self.v = CentralizedCritic(args=args, agents=agents)
 
     def step(self, obs):
         a, logp_a = {}, {}
@@ -135,27 +153,31 @@ class EstimationNet(torch.nn.Module):
         self.lin1 = torch.nn.Linear(self.nhid * 2, self.nhid)
 
     def forward(self, obs, is_alive):
-        numbers = int(is_alive.sum())
         if len(obs.shape) == 2:
             obs = obs.unsqueeze(0)
             is_alive = is_alive.unsqueeze(0)
 
-        x = torch.zeros(numbers, obs.shape[2])
-        batch = torch.zeros(numbers, obs.shape[2])
-        edge_index = torch.zeros(numbers * 2, 2)
+        numbers = int(is_alive.sum())
 
-        batch_ptr = 0
-        for i in range(numbers):
+        x = torch.zeros(numbers + obs.shape[0], obs.shape[2])
+        batch = torch.zeros(numbers + obs.shape[0], dtype=torch.long)
+        edge_index = torch.zeros(2, numbers * 2, dtype=torch.long)
+
+        batch_ptr, edge_ptr = 0, 0
+        for i in range(obs.shape[0]):
             agent_number = int(is_alive[i].sum())
-            fill_slice = slice(batch_ptr, batch_ptr + agent_number)
+            fill_slice = slice(batch_ptr + 1, batch_ptr + agent_number + 1)
 
+            x[batch_ptr] = torch.zeros(self.args.vae_observation_dim)
             x[fill_slice] = obs[i][is_alive[i] == 1]
+            batch[batch_ptr] = i
             batch[fill_slice] = torch.ones(agent_number) * i
 
-            edge_index[batch_ptr * 2: batch_ptr * 2 + agent_number, 1] = torch.arange(agent_number)
-            edge_index[batch_ptr * 2 + agent_number: (batch_ptr + agent_number) * 2, 0] = torch.arange(agent_number)
+            edge_index[1, edge_ptr * 2: edge_ptr * 2 + agent_number] = torch.arange(agent_number) + 1
+            edge_index[0, edge_ptr * 2 + agent_number: (edge_ptr + agent_number) * 2] = torch.arange(agent_number) + 1
 
-            batch_ptr += agent_number
+            batch_ptr += agent_number + 1
+            edge_ptr += agent_number
 
         x = F.relu(self.conv1(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
@@ -171,6 +193,6 @@ class EstimationNet(torch.nn.Module):
 
         x = x1 + x2 + x3
 
-        x = F.relu(self.lin1(x))
+        x = self.lin1(x)
 
         return x

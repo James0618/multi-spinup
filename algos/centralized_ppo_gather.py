@@ -9,9 +9,9 @@ from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg
 from spinup.utils.mpi_tools import mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 
 
-def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=4e-4, vf_lr=8e-4,
-        train_pi_iters=50, train_v_iters=50, lam=0.97, max_ep_len=1000, actor_critic=centralized_core.VAEActorCritic,
-        target_kl=0.01, logger_kwargs=dict(), save_freq=10):
+def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.5, pi_lr=4e-4, vf_lr=8e-4,
+        train_pi_iters=50, train_v_iters=80, lam=0.97, max_ep_len=1000, actor_critic=centralized_core.VAEActorCritic,
+        target_kl=0.2, logger_kwargs=dict(), save_freq=10):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -141,7 +141,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     n_actions = args.n_actions
 
     # Create actor-critic module
-    ac = actor_critic(args=args)
+    ac = actor_critic(args=args, agents=env.possible_agents)
 
     # Sync params across processes
     sync_params(ac)
@@ -168,11 +168,12 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
-        obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+        obs, act, adv, logp_old, is_alive = data['obs'], data['act'], data['adv'], data['logp'], data['alive']
 
         # Policy loss
         pi, logp = ac.pi(obs, act)
-        ratio = torch.exp(logp - logp_old)
+        log_ratio = (logp - logp_old) * is_alive
+        ratio = torch.exp(log_ratio.sum(dim=-1))
         clip_adv = torch.clamp(ratio, 1 - clip_ratio, 1 + clip_ratio) * adv
         loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
 
@@ -187,8 +188,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Set up function for computing value loss
     def compute_loss_v(data):
-        obs, ret = data['obs'], data['ret']
-        return ((ac.v(obs) - ret) ** 2).mean()
+        obs, ret, is_alive = data['obs'], data['ret'], data['alive']
+        return ((ac.v(obs, is_alive) - ret) ** 2).mean()
 
     # Set up optimizers for policy and value function
     pi_optimizer = Adam(ac.pi.parameters(), lr=pi_lr)
@@ -252,7 +253,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
             # save and log
             buf.store(obs=obs, act=actions, rew=rewards, val=values, logp=log_probs)
 
-            steps_in_buffer += len(rewards.keys())
+            steps_in_buffer += 1
 
             # Update obs (critical!)
             obs = next_obs
@@ -277,7 +278,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
-            logger.save_state({'env': env}, None)
+            # logger.save_state({'env': env}, None)
+            pass
 
         # Perform PPO update!
         update()

@@ -2,6 +2,7 @@
 cpu: 8
 steps_per_epoch: 120000
 epochs: 500
+centralized: False
 
 # Environment Settings
 max_cycle: 120

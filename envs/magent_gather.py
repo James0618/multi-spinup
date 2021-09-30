@@ -44,7 +44,7 @@ def load_config(map_size, minimap_mode, view_range, step_reward, attack_penalty,
     options = {
         'width': 1, 'length': 1, 'hp': 3, 'speed': 3,
         'view_range': gw.CircleRange(view_range), 'attack_range': gw.CircleRange(1),
-        'damage': 6, 'step_recover': 0, 'attack_in_group': 1,
+        'damage': 0, 'step_recover': 0, 'attack_in_group': 1,
         'step_reward': step_reward, 'attack_penalty': attack_penalty, 'dead_penalty': dead_penalty
     }
 

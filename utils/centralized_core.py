@@ -44,44 +44,52 @@ def discount_cumsum(x, discount):
     return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
 
 
-class Actor(nn.Module):
-    def _distribution(self, obs):
-        raise NotImplementedError
+class VAEActor(nn.Module):
+    def __init__(self, args, state_net):
+        super(VAEActor, self).__init__()
+        self.args = args
+        self.logits_net = nn.Sequential(
+            nn.Linear(args.vae_observation_dim + args.nhid, args.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(args.hidden_dim, args.n_actions),
+        )
+        self.state_net = state_net
+
+    def _distribution(self, obs, state):
+        inputs = torch.cat((obs, state), dim=-1)
+        logits = self.logits_net(inputs)
+        return Categorical(logits=logits)
 
     def _log_prob_from_distribution(self, pi, act):
-        raise NotImplementedError
+        return pi.log_prob(act)
 
-    def forward(self, obs, act=None):
+    def forward(self, obs, act=None, is_alive=None):
         # Produce action distributions for given observations, and
         # optionally compute the log likelihood of given actions under
         # those distributions.
-        pi = self._distribution(obs)
+        if type(obs) == dict:
+            # the type of obs is dict
+            agent_number = len(self.possible_agents)
+            obs_tensor = torch.zeros(agent_number, self.args.vae_observation_dim)
+            for i, agent in enumerate(self.possible_agents):
+                if agent in obs.keys():
+                    obs_tensor[i] = obs[agent]
+            is_alive = torch.ones(agent_number)
+            state = self.state_net(obs_tensor, is_alive).squeeze()
+
+        else:
+            state = self.state_net(obs, is_alive).squeeze()
+
+        state = state.expand(obs.shape[1], obs.shape[0], -1).detach().transpose(0, 1)
+        pi = self._distribution(obs, state)
         logp_a = None
         if act is not None:
             logp_a = self._log_prob_from_distribution(pi, act)
         return pi, logp_a
 
 
-class VAEActor(Actor):
-    def __init__(self, args):
-        super(VAEActor, self).__init__()
-        self.args = args
-        self.logits_net = nn.Sequential(
-            nn.Linear(args.vae_observation_dim, args.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(args.hidden_dim, args.n_actions),
-        )
-
-    def _distribution(self, obs):
-        logits = self.logits_net(obs)
-        return Categorical(logits=logits)
-
-    def _log_prob_from_distribution(self, pi, act):
-        return pi.log_prob(act)
-
-
 class CentralizedCritic(nn.Module):
-    def __init__(self, args, agents):
+    def __init__(self, args, state_net, agents):
         super(CentralizedCritic, self).__init__()
         self.args = args
         self.possible_agents = agents
@@ -91,7 +99,7 @@ class CentralizedCritic(nn.Module):
             nn.ReLU(),
             nn.Linear(args.hidden_dim, 1),
         )
-        self.state_net = EstimationNet(args=args)
+        self.state_net = state_net
 
     def forward(self, obs, is_alive=None):
         if type(obs) == dict:
@@ -104,35 +112,13 @@ class CentralizedCritic(nn.Module):
             is_alive = torch.ones(agent_number)
             state = self.state_net(obs_tensor, is_alive).squeeze()
 
-            return self.v_net(state)
+            values = self.v_net(state).squeeze()
+            return values
 
         else:
             state = self.state_net(obs, is_alive).squeeze()
-
-            return self.v_net(state)
-
-
-class VAEActorCritic(nn.Module):
-    def __init__(self, args, agents):
-        super(VAEActorCritic, self).__init__()
-        self.args = args
-        self.possible_agents = agents
-        self.pi = VAEActor(args=args)
-        self.v = CentralizedCritic(args=args, agents=agents)
-
-    def step(self, obs):
-        a, logp_a = {}, {}
-        with torch.no_grad():
-            for agent in obs.keys():
-                pi = self.pi._distribution(obs[agent])
-                a[agent] = pi.sample()
-                logp_a[agent] = self.pi._log_prob_from_distribution(pi, a[agent])
-
-            v = self.v(obs)
-        return a, v, logp_a
-
-    def act(self, obs):
-        return self.step(obs)[0]
+            values = self.v_net(state).squeeze()
+            return values
 
 
 class EstimationNet(torch.nn.Module):
@@ -145,12 +131,12 @@ class EstimationNet(torch.nn.Module):
 
         self.conv1 = GCNConv(self.num_features, self.nhid)
         self.pool1 = SAGPooling(self.nhid, ratio=self.pooling_ratio)
-        self.conv2 = GCNConv(self.nhid, self.nhid)
-        self.pool2 = SAGPooling(self.nhid, ratio=self.pooling_ratio)
-        self.conv3 = GCNConv(self.nhid, self.nhid)
-        self.pool3 = SAGPooling(self.nhid, ratio=self.pooling_ratio)
 
-        self.lin1 = torch.nn.Linear(self.nhid * 2, self.nhid)
+        self.lin1 = torch.nn.Sequential(
+            torch.nn.Linear(self.nhid * 2, self.nhid),
+            torch.nn.ReLU(),
+            torch.nn.Linear(self.nhid, self.nhid)
+        )
 
     def forward(self, obs, is_alive):
         if len(obs.shape) == 2:
@@ -175,6 +161,8 @@ class EstimationNet(torch.nn.Module):
 
             edge_index[1, edge_ptr * 2: edge_ptr * 2 + agent_number] = torch.arange(agent_number) + 1
             edge_index[0, edge_ptr * 2 + agent_number: (edge_ptr + agent_number) * 2] = torch.arange(agent_number) + 1
+            a = x.numpy()
+            b = batch.numpy()
 
             batch_ptr += agent_number + 1
             edge_ptr += agent_number
@@ -182,17 +170,42 @@ class EstimationNet(torch.nn.Module):
         x = F.relu(self.conv1(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
         x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
-
-        x = F.relu(self.conv2(x, edge_index))
-        x, edge_index, _, batch, _, _ = self.pool2(x, edge_index, None, batch)
-        x2 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
-
-        x = F.relu(self.conv3(x, edge_index))
-        x, edge_index, _, batch, _, _ = self.pool3(x, edge_index, None, batch)
-        x3 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
-
-        x = x1 + x2 + x3
-
+        a = x.detach().numpy()
+        b = batch.numpy()
+        c = x1.detach().numpy()
+        x = x1
         x = self.lin1(x)
 
         return x
+
+
+class VAEActorCritic(nn.Module):
+    def __init__(self, args, agents):
+        super(VAEActorCritic, self).__init__()
+        self.args = args
+        self.possible_agents = agents
+        self.state_net = EstimationNet(args=args)
+        self.pi = VAEActor(args=args, state_net=self.state_net)
+        self.v = CentralizedCritic(args=args, agents=agents, state_net=self.state_net)
+
+    def step(self, obs):
+        a, logp_a = {}, {}
+        with torch.no_grad():
+            agent_number = len(self.possible_agents)
+            obs_tensor = torch.zeros(agent_number, self.args.vae_observation_dim)
+            for i, agent in enumerate(self.possible_agents):
+                if agent in obs.keys():
+                    obs_tensor[i] = obs[agent]
+            is_alive = torch.ones(agent_number)
+            state = self.state_net(obs_tensor, is_alive).squeeze()
+
+            for agent in obs.keys():
+                pi = self.pi._distribution(obs[agent], state.detach())
+                a[agent] = pi.sample()
+                logp_a[agent] = self.pi._log_prob_from_distribution(pi, a[agent])
+
+            v = self.v(obs)
+        return a, v, logp_a
+
+    def act(self, obs):
+        return self.step(obs)[0]

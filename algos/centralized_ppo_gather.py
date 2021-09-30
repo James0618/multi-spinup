@@ -11,7 +11,7 @@ from spinup.utils.mpi_tools import mpi_avg, proc_id, mpi_statistics_scalar, num_
 
 def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.5, pi_lr=4e-4, vf_lr=8e-4,
         train_pi_iters=50, train_v_iters=80, lam=0.97, max_ep_len=1000, actor_critic=centralized_core.VAEActorCritic,
-        target_kl=0.2, logger_kwargs=dict(), save_freq=10):
+        target_kl=1.0, logger_kwargs=dict(), save_freq=10):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -171,7 +171,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
         obs, act, adv, logp_old, is_alive = data['obs'], data['act'], data['adv'], data['logp'], data['alive']
 
         # Policy loss
-        pi, logp = ac.pi(obs, act)
+        pi, logp = ac.pi(obs, act, is_alive)
         log_ratio = (logp - logp_old) * is_alive
         ratio = torch.exp(log_ratio.sum(dim=-1))
         clip_adv = torch.clamp(ratio, 1 - clip_ratio, 1 + clip_ratio) * adv
@@ -189,7 +189,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     # Set up function for computing value loss
     def compute_loss_v(data):
         obs, ret, is_alive = data['obs'], data['ret'], data['alive']
-        return ((ac.v(obs, is_alive) - ret) ** 2).mean()
+        loss = (ac.v(obs, is_alive) - ret) ** 2
+        return loss.mean()
 
     # Set up optimizers for policy and value function
     pi_optimizer = Adam(ac.pi.parameters(), lr=pi_lr)
@@ -205,6 +206,14 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
         pi_l_old = pi_l_old.item()
         v_l_old = compute_loss_v(data).item()
 
+        # Value function learning
+        for i in range(train_v_iters):
+            vf_optimizer.zero_grad()
+            loss_v = compute_loss_v(data)
+            loss_v.backward()
+            mpi_avg_grads(ac.v)  # average grads across MPI processes
+            vf_optimizer.step()
+
         # Train policy with multiple steps of gradient descent
         for i in range(train_pi_iters):
             pi_optimizer.zero_grad()
@@ -218,14 +227,6 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
             pi_optimizer.step()
 
         logger.store(StopIter=i)
-
-        # Value function learning
-        for i in range(train_v_iters):
-            vf_optimizer.zero_grad()
-            loss_v = compute_loss_v(data)
-            loss_v.backward()
-            mpi_avg_grads(ac.v)  # average grads across MPI processes
-            vf_optimizer.step()
 
         # Log changes from update
         kl, ent, cf = pi_info['kl'], pi_info_old['ent'], pi_info['cf']

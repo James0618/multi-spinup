@@ -1,6 +1,6 @@
 # Algorithm Settings
-cpu: 1
-steps_per_epoch: 200
+cpu: 8
+steps_per_epoch: 2000
 epochs: 500
 centralized: True
 

@@ -161,8 +161,7 @@ class EstimationNet(torch.nn.Module):
 
             edge_index[1, edge_ptr * 2: edge_ptr * 2 + agent_number] = torch.arange(agent_number) + 1
             edge_index[0, edge_ptr * 2 + agent_number: (edge_ptr + agent_number) * 2] = torch.arange(agent_number) + 1
-            a = x.numpy()
-            b = batch.numpy()
+            edge_index[:, edge_ptr * 2: (edge_ptr + agent_number) * 2] += batch_ptr
 
             batch_ptr += agent_number + 1
             edge_ptr += agent_number
@@ -170,9 +169,6 @@ class EstimationNet(torch.nn.Module):
         x = F.relu(self.conv1(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
         x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
-        a = x.detach().numpy()
-        b = batch.numpy()
-        c = x1.detach().numpy()
         x = x1
         x = self.lin1(x)
 

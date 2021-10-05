@@ -22,7 +22,7 @@ def run(exp_name='ppo', config_name='gather'):
     }
     if args.vae_model:
         if args.centralized:
-            actor_critic = centralized_core.VAEActorCritic
+            actor_critic = centralized_core.StateVAEActorCritic
         else:
             actor_critic = core.VAEActorCritic
 

@@ -45,7 +45,7 @@ def discount_cumsum(x, discount):
 
 
 class VAEActor(nn.Module):
-    def __init__(self, args, state_net):
+    def __init__(self, args):
         super(VAEActor, self).__init__()
         self.args = args
         self.logits_net = nn.Sequential(
@@ -53,7 +53,6 @@ class VAEActor(nn.Module):
             nn.ReLU(),
             nn.Linear(args.hidden_dim, args.n_actions),
         )
-        self.state_net = state_net
 
     def _distribution(self, obs, state):
         inputs = torch.cat((obs, state), dim=-1)
@@ -63,7 +62,7 @@ class VAEActor(nn.Module):
     def _log_prob_from_distribution(self, pi, act):
         return pi.log_prob(act)
 
-    def forward(self, obs, act=None, is_alive=None):
+    def forward(self, obs, state_net, act=None, is_alive=None):
         # Produce action distributions for given observations, and
         # optionally compute the log likelihood of given actions under
         # those distributions.
@@ -75,10 +74,10 @@ class VAEActor(nn.Module):
                 if agent in obs.keys():
                     obs_tensor[i] = obs[agent]
             is_alive = torch.ones(agent_number)
-            state = self.state_net(obs_tensor, is_alive).squeeze()
+            state = state_net(obs_tensor, is_alive).squeeze()
 
         else:
-            state = self.state_net(obs, is_alive).squeeze()
+            state = state_net(obs, is_alive).squeeze()
 
         state = state.expand(obs.shape[1], obs.shape[0], -1).detach().transpose(0, 1)
         pi = self._distribution(obs, state)
@@ -181,7 +180,7 @@ class VAEActorCritic(nn.Module):
         self.args = args
         self.possible_agents = agents
         self.state_net = EstimationNet(args=args)
-        self.pi = VAEActor(args=args, state_net=self.state_net)
+        self.pi = VAEActor(args=args)
         self.v = CentralizedCritic(args=args, agents=agents, state_net=self.state_net)
 
     def step(self, obs):
@@ -205,3 +204,84 @@ class VAEActorCritic(nn.Module):
 
     def act(self, obs):
         return self.step(obs)[0]
+
+
+class StateActor(nn.Module):
+    def __init__(self, args):
+        super(StateActor, self).__init__()
+        self.args = args
+        self.logits_net = nn.Sequential(
+            nn.Linear(args.vae_observation_dim + args.state_dim, args.hidden_dim * 2),
+            nn.ReLU(),
+            nn.Linear(args.hidden_dim * 2, args.n_actions),
+        )
+
+    def _distribution(self, obs, state):
+        inputs = torch.cat((obs, state), dim=-1)
+        logits = self.logits_net(inputs)
+        return Categorical(logits=logits)
+
+    def _log_prob_from_distribution(self, pi, act):
+        return pi.log_prob(act)
+
+    def forward(self, obs, state, act=None):
+        # Produce action distributions for given observations, and
+        # optionally compute the log likelihood of given actions under
+        # those distributions.
+
+        state = state.expand(obs.shape[1], obs.shape[0], -1).detach().transpose(0, 1)
+        pi = self._distribution(obs, state)
+        logp_a = None
+        if act is not None:
+            logp_a = self._log_prob_from_distribution(pi, act)
+        return pi, logp_a
+
+
+class StateCritic(nn.Module):
+    def __init__(self, args, agents):
+        super(StateCritic, self).__init__()
+        self.args = args
+        self.possible_agents = agents
+        # self.feature_net, self.cnn_output_size = cnn(args)
+        self.v_net = nn.Sequential(
+            nn.Linear(args.state_dim, args.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(args.hidden_dim, args.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(args.hidden_dim, 1),
+        )
+
+    def forward(self, state):
+        values = self.v_net(state).squeeze()
+        return values
+
+
+class StateVAEActorCritic(nn.Module):
+    def __init__(self, args, agents):
+        super(StateVAEActorCritic, self).__init__()
+        self.args = args
+        self.possible_agents = agents
+        self.pi = StateActor(args=args)
+        self.v = StateCritic(args=args, agents=agents)
+
+    def step(self, obs, state):
+        a, logp_a = {}, {}
+        with torch.no_grad():
+            agent_number = len(self.possible_agents)
+            obs_tensor = torch.zeros(agent_number, self.args.vae_observation_dim)
+            for i, agent in enumerate(self.possible_agents):
+                if agent in obs.keys():
+                    obs_tensor[i] = obs[agent]
+
+            for agent in obs.keys():
+                pi = self.pi._distribution(obs[agent], state)
+                a[agent] = pi.sample()
+                logp_a[agent] = self.pi._log_prob_from_distribution(pi, a[agent])
+
+            v = self.v(state)
+        return a, v, logp_a
+
+    def act(self, obs, state):
+        return self.step(obs, state)[0]
+
+

@@ -50,7 +50,7 @@ class PPOBuffer:
 
         self.ptr = np.zeros(self.max_agents).astype(np.int)
 
-    def store(self, obs, act, rew, val, logp):
+    def store(self, obs, act, rew, val, logp, state=None):
         """
         Append one timestep of agent-environment interaction to the buffer.
         """

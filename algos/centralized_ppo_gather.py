@@ -3,15 +3,15 @@ import torch
 from torch.optim import Adam
 import time
 from utils import centralized_core, policy, centralized_buffer
-from envs.battle import BattleEnv
+from envs.gather import GatherEnv
 from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
 from spinup.utils.mpi_tools import mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 
 
-def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=4e-4, vf_lr=8e-4,
-        train_pi_iters=20, train_v_iters=80, lam=0.97, max_ep_len=1000, actor_critic=centralized_core.VAEActorCritic,
-        target_kl=0.2, logger_kwargs=dict(), save_freq=10):
+def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=5e-4, vf_lr=1e-3,
+        train_pi_iters=50, train_v_iters=80, lam=0.97, max_ep_len=1000, actor_critic=centralized_core.VAEActorCritic,
+        target_kl=0.05, logger_kwargs=dict(), save_freq=10):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -132,7 +132,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     np.random.seed(seed)
 
     # Instantiate environment
-    env: BattleEnv = env_fn()
+    env: GatherEnv = env_fn()
     if args.vae_model:
         obs_shape = torch.Size([args.vae_observation_dim])
     else:
@@ -168,17 +168,18 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
+        state = data['state']
         obs, act, adv, logp_old, is_alive = data['obs'], data['act'], data['adv'], data['logp'], data['alive']
 
         # Policy loss
-        pi, logp = ac.pi(obs, act, is_alive)
+        pi, logp = ac.pi(obs, state, act)
         log_ratio = (logp - logp_old) * is_alive
         ratio = torch.exp(log_ratio.sum(dim=-1))
         clip_adv = torch.clamp(ratio, 1 - clip_ratio, 1 + clip_ratio) * adv
         loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
 
         # Useful extra info
-        approx_kl = (logp_old - logp).mean().item()
+        approx_kl = - log_ratio.sum(-1).mean().item()
         ent = pi.entropy().mean().item()
         clipped = ratio.gt(1 + clip_ratio) | ratio.lt(1 - clip_ratio)
         clipfrac = torch.as_tensor(clipped, dtype=torch.float32).mean().item()
@@ -188,8 +189,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Set up function for computing value loss
     def compute_loss_v(data):
-        obs, ret, is_alive = data['obs'], data['ret'], data['alive']
-        loss = (ac.v(obs, is_alive) - ret) ** 2
+        state, obs, ret, is_alive = data['state'], data['obs'], data['ret'], data['alive']
+        loss = (ac.v(state) - ret) ** 2
         return loss.mean()
 
     # Set up optimizers for policy and value function
@@ -206,6 +207,26 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
         pi_l_old = pi_l_old.item()
         v_l_old = compute_loss_v(data).item()
 
+        # Train policy with multiple steps of gradient descent
+        for i in range(train_pi_iters):
+            pi_optimizer.zero_grad()
+            loss_pi, pi_info = compute_loss_pi(data)
+            kl = mpi_avg(pi_info['kl'])
+            clipfrac = mpi_avg(pi_info['cf'])
+            if kl > 1.5 * target_kl:
+                logger.log('Early stopping at step %d due to reaching max kl.' % i)
+                break
+
+            if clipfrac > 0.1:
+                logger.log('Early stopping at step %d due to reaching max clip frac.' % i)
+                break
+
+            loss_pi.backward()
+            mpi_avg_grads(ac.pi)  # average grads across MPI processes
+            pi_optimizer.step()
+
+        logger.store(StopIter=i)
+
         # Value function learning
         for i in range(train_v_iters):
             vf_optimizer.zero_grad()
@@ -213,20 +234,6 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
             loss_v.backward()
             mpi_avg_grads(ac.v)  # average grads across MPI processes
             vf_optimizer.step()
-
-        # Train policy with multiple steps of gradient descent
-        for i in range(train_pi_iters):
-            pi_optimizer.zero_grad()
-            loss_pi, pi_info = compute_loss_pi(data)
-            kl = mpi_avg(pi_info['kl'])
-            if kl > 1.5 * target_kl:
-                logger.log('Early stopping at step %d due to reaching max kl.' % i)
-                break
-            loss_pi.backward()
-            mpi_avg_grads(ac.pi)  # average grads across MPI processes
-            pi_optimizer.step()
-
-        logger.store(StopIter=i)
 
         # Log changes from update
         kl, ent, cf = pi_info['kl'], pi_info_old['ent'], pi_info['cf']
@@ -238,6 +245,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     # Prepare for interaction with environment
     start_time = time.time()
     obs, ep_ret, ep_len = env.reset(), 0, 0
+    state = env.state
 
     ally_policy = policy.Policy(args=args, actor_critic=ac)
 
@@ -245,19 +253,21 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     for epoch in range(epochs):
         steps_in_buffer = 0
         while steps_in_buffer < local_steps_per_epoch:
-            actions, values, log_probs = ally_policy.choose_action(obs)
+            actions, values, log_probs = ally_policy.choose_action(obs, state)
 
             next_obs, rewards, done, _ = env.step(actions)
+            next_state = env.state
             ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
 
             # save and log
-            buf.store(obs=obs, act=actions, rew=rewards, val=values, logp=log_probs)
+            buf.store(state=state, obs=obs, act=actions, rew=rewards, val=values, logp=log_probs)
 
             steps_in_buffer += 1
 
             # Update obs (critical!)
             obs = next_obs
+            state = next_state
 
             terminal = is_terminated(terminated=done)
             epoch_ended = steps_in_buffer >= local_steps_per_epoch
@@ -268,7 +278,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
                     pass
                 # if trajectory didn't reach terminal state, bootstrap value target
                 if epoch_ended:
-                    _, v, _ = ally_policy.choose_action(obs)
+                    _, v, _ = ally_policy.choose_action(obs, state=state)
                 else:
                     v = 0
                 buf.finish_path(v)

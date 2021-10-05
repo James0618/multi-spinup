@@ -1,5 +1,5 @@
 {
-    "clip_ratio":	0.5,
+    "clip_ratio":	0.2,
     "epochs":	500,
     "exp_name":	"gather-centralized-ppo-10-2",
     "gamma":	0.995,
@@ -9,8 +9,8 @@
     "save_freq":	10,
     "seed":	0,
     "steps_per_epoch":	2000,
-    "target_kl":	1.0,
-    "train_pi_iters":	50,
+    "target_kl":	2.0,
+    "train_pi_iters":	20,
     "train_v_iters":	80,
     "vf_lr":	0.0008
 }

@@ -15,13 +15,14 @@ class PPOCentralizedBuffer:
         self.possible_agents = agents
         self.obs_shape, self.n_actions, self.max_agents, self.max_cycle = obs_shape, n_actions, max_agents, max_cycle
         self.buffer_size, self.gamma, self.lam = buffer_size, gamma, lam
-        self.obs_buf, self.act_buf, self.adv_buf, self.val_buf = None, None, None, None
+        self.state_buf, self.obs_buf, self.act_buf, self.adv_buf, self.val_buf = None, None, None, None, None
         self.logp_buf, self.ret_buf, self.rew_buf, self.alive_buf = None, None, None, None
 
         self.ptr, self.path_start_idx = 0, 0
         self.reset()
 
     def reset(self):
+        self.state_buf = torch.zeros(self.buffer_size, *self.obs_shape)
         self.obs_buf = torch.zeros(self.buffer_size, self.max_agents, *self.obs_shape)
         self.act_buf = torch.zeros(self.buffer_size, self.max_agents, dtype=torch.long)
         self.logp_buf = torch.zeros(self.buffer_size, self.max_agents)
@@ -32,7 +33,7 @@ class PPOCentralizedBuffer:
         self.ret_buf = torch.zeros(self.buffer_size)
         self.val_buf = torch.zeros(self.buffer_size)
 
-    def store(self, obs, act, rew, val, logp):
+    def store(self, state, obs, act, rew, val, logp):
         """
         Append one timestep of agent-environment interaction to the buffer.
         """
@@ -50,6 +51,7 @@ class PPOCentralizedBuffer:
                 except:
                     raise ValueError('Wrong Index')
 
+        self.state_buf[self.ptr] = state
         self.rew_buf[self.ptr] = global_reward
         self.val_buf[self.ptr] = val
         self.ptr += 1
@@ -93,8 +95,8 @@ class PPOCentralizedBuffer:
         assert self.ptr == self.buffer_size  # buffer has to be full before you can get
         self.ptr, self.path_start_idx = 0, 0
         # the next two lines implement the advantage normalization trick
-        adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
-        self.adv_buf = (self.adv_buf - adv_mean) / adv_std
-        data = dict(obs=self.obs_buf, act=self.act_buf, alive=self.alive_buf,
+        # adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
+        # self.adv_buf = (self.adv_buf - adv_mean) / adv_std
+        data = dict(state=self.state_buf, obs=self.obs_buf, act=self.act_buf, alive=self.alive_buf,
                     ret=self.ret_buf, adv=self.adv_buf, logp=self.logp_buf)
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}

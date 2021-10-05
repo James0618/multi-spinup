@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from envs import magent_gather
 from utils.preprocessor import Preprocessor, GraphBuilder
 
@@ -24,10 +25,15 @@ class GatherEnv:
         self.observation_space = self.env.observation_spaces[self.possible_agents[0]]
         self.state_space = self.env.state_space
         self.controlled_group = 'omnivore'
+        self.state_net = torch.load('envs/vae_model/state-vae.pth')
+        self.state = None
 
     def reset(self):
         observations = self.env.reset()
         observations, positions = self.preprocessor.preprocess(observations=observations)
+        state = self.env.state().transpose(2, 0, 1)
+        temp, _, _ = self.state_net.encode(torch.from_numpy(state).type(torch.float).unsqueeze(0))
+        self.state = temp.squeeze().detach()
 
         self.graph_builder.reset()
         self.graph_builder.build_graph(positions=positions)
@@ -44,17 +50,16 @@ class GatherEnv:
 
         observations, rewards, done, infos = self.env.step(actions)
         observations, positions = self.preprocessor.preprocess(observations=observations)
+        state = self.env.state().transpose(2, 0, 1)
+        _, temp, _ = self.state_net.encode(torch.from_numpy(state).type(torch.float).unsqueeze(0))
+        self.state = temp.squeeze().detach()
 
-        self.graph_builder.reset()
-        self.graph_builder.build_graph(positions=positions)
+        # self.graph_builder.reset()
+        # self.graph_builder.build_graph(positions=positions)
 
         if self.args.plot_topology:
             self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions,
                                                           controlled_group=self.controlled_group)
-
-        if self.args.communicate:
-            for i in range(100):
-                self.communicate([agent for agent in rewards.keys()])
 
         return observations, rewards, done, infos
 

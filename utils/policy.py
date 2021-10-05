@@ -14,7 +14,7 @@ class Policy:
         else:
             self.character = 'ally'
 
-    def choose_action(self, observations):
+    def choose_action(self, observations, state=None):
         actions, values, log_probs = {}, {}, {}
         if self.character == 'enemy':
             if self.policy == 'random':
@@ -28,7 +28,7 @@ class Policy:
 
         else:
             if self.args.centralized:
-                actions, values, log_probs = self.centralized_ppo_action(observations=observations)
+                actions, values, log_probs = self.centralized_ppo_action(observations=observations, state=state)
             else:
                 for key in observations.keys():
                     action, value, log_prob = self.ppo_action(observation=observations[key])
@@ -39,8 +39,8 @@ class Policy:
     def ppo_action(self, observation):
         return self.actor_critic.step(observation)
 
-    def centralized_ppo_action(self, observations):
-        return self.actor_critic.step(observations)
+    def centralized_ppo_action(self, observations, state):
+        return self.actor_critic.step(observations, state)
 
     def random_actions(self):
         action = np.random.randint(0, self.args.n_actions)

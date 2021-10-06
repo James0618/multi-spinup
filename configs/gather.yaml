@@ -1,11 +1,11 @@
 # Algorithm Settings
 cpu: 8
 steps_per_epoch: 120000
-epochs: 500
+epochs: 100
 centralized: False
 
 # Environment Settings
-max_cycle: 120
+max_cycle: 80
 map_size: 20
 step_reward: -0.05
 dead_penalty: -0.5

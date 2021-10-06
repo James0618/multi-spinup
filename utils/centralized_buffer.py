@@ -11,8 +11,10 @@ class PPOCentralizedBuffer:
     for calculating the advantages of state-action pairs.
     """
 
-    def __init__(self, obs_shape, n_actions, max_agents, max_cycle, buffer_size, agents, gamma=0.99, lam=0.95):
+    def __init__(self, state_shape, obs_shape, n_actions, max_agents, max_cycle, buffer_size, agents, gamma=0.99,
+                 lam=0.95):
         self.possible_agents = agents
+        self.state_shape = state_shape
         self.obs_shape, self.n_actions, self.max_agents, self.max_cycle = obs_shape, n_actions, max_agents, max_cycle
         self.buffer_size, self.gamma, self.lam = buffer_size, gamma, lam
         self.state_buf, self.obs_buf, self.act_buf, self.adv_buf, self.val_buf = None, None, None, None, None
@@ -22,7 +24,7 @@ class PPOCentralizedBuffer:
         self.reset()
 
     def reset(self):
-        self.state_buf = torch.zeros(self.buffer_size, *self.obs_shape)
+        self.state_buf = torch.zeros(self.buffer_size, *self.state_shape)
         self.obs_buf = torch.zeros(self.buffer_size, self.max_agents, *self.obs_shape)
         self.act_buf = torch.zeros(self.buffer_size, self.max_agents, dtype=torch.long)
         self.logp_buf = torch.zeros(self.buffer_size, self.max_agents)

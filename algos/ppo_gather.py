@@ -3,7 +3,7 @@ import torch
 from torch.optim import Adam
 import time
 from utils import core, policy, buffer
-from envs.battle import BattleEnv
+from envs.gather import GatherEnv
 from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
 from spinup.utils.mpi_tools import mpi_avg, proc_id, mpi_statistics_scalar, num_procs
@@ -132,7 +132,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     np.random.seed(seed)
 
     # Instantiate environment
-    env: BattleEnv = env_fn()
+    env: GatherEnv = env_fn()
     if args.vae_model:
         obs_shape = torch.Size([args.vae_observation_dim])
     else:
@@ -235,20 +235,26 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     # Prepare for interaction with environment
     start_time = time.time()
     obs, ep_ret, ep_len = env.reset(), 0, 0
+    state = env.env.state().transpose(2, 0, 1)
 
     ally_policy = policy.Policy(args=args, actor_critic=ac)
-
+    # state_buf = torch.zeros(5000, 5, 20, 20)
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         steps_in_buffer = 0
+        state_buf_ptr = 0
         while steps_in_buffer < local_steps_per_epoch:
             actions, values, log_probs = ally_policy.choose_action(obs)
 
             next_obs, rewards, done, _ = env.step(actions)
+            state = env.env.state().transpose(2, 0, 1)
             ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
 
             # save and log
+            # if state_buf_ptr < 50:
+            #     state_buf[state_buf_ptr + epoch * 50] = torch.from_numpy(state).type(torch.float)
+            #     state_buf_ptr += 1
             buf.store(obs=obs, act=actions, rew=rewards, val=values, logp=log_probs)
 
             steps_in_buffer += len(rewards.keys())
@@ -300,3 +306,5 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
         logger.log_tabular('StopIter', average_only=True)
         logger.log_tabular('Time', time.time() - start_time)
         logger.dump_tabular()
+
+        # torch.save(state_buf, 'results/state_buf_{}.pth'.format(proc_id()))

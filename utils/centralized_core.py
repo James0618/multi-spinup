@@ -211,9 +211,9 @@ class StateActor(nn.Module):
         super(StateActor, self).__init__()
         self.args = args
         self.logits_net = nn.Sequential(
-            nn.Linear(args.vae_observation_dim + args.state_dim, args.hidden_dim * 2),
+            nn.Linear(args.vae_observation_dim + args.state_dim, args.hidden_dim),
             nn.ReLU(),
-            nn.Linear(args.hidden_dim * 2, args.n_actions),
+            nn.Linear(args.hidden_dim, args.n_actions),
         )
 
     def _distribution(self, obs, state):
@@ -246,9 +246,9 @@ class StateCritic(nn.Module):
         self.v_net = nn.Sequential(
             nn.Linear(args.state_dim, args.hidden_dim),
             nn.ReLU(),
-            nn.Linear(args.hidden_dim, args.hidden_dim),
+            nn.Linear(args.hidden_dim, args.hidden_dim // 2),
             nn.ReLU(),
-            nn.Linear(args.hidden_dim, 1),
+            nn.Linear(args.hidden_dim // 2, 1),
         )
 
     def forward(self, state):

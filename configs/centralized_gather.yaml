@@ -1,6 +1,6 @@
 # Algorithm Settings
-cpu: 1
-steps_per_epoch: 20
+cpu: 8
+steps_per_epoch: 120000
 epochs: 500
 centralized: True
 
@@ -15,5 +15,5 @@ communication_range: 2
 message_size: 5
 view_range: 6
 vae_observation_dim: 96
-state_dim: 96
+state_dim: 128
 vae_model: True

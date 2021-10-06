@@ -9,7 +9,7 @@ from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg
 from spinup.utils.mpi_tools import mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 
 
-def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=5e-4, vf_lr=1e-3,
+def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=4e-4, vf_lr=8e-4,
         train_pi_iters=50, train_v_iters=80, lam=0.97, max_ep_len=1000, actor_critic=centralized_core.VAEActorCritic,
         target_kl=0.05, logger_kwargs=dict(), save_freq=10):
     """
@@ -138,6 +138,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     else:
         obs_shape = args.observation_shape
 
+    state_shape = torch.Size([args.state_dim])
     n_actions = args.n_actions
 
     # Create actor-critic module
@@ -155,9 +156,9 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     groups = ['omnivore']
     agents = env.possible_agents
-    buf = centralized_buffer.PPOCentralizedBuffer(obs_shape=obs_shape, n_actions=n_actions, max_agents=len(agents),
-                                                  max_cycle=args.max_cycle, buffer_size=local_steps_per_epoch,
-                                                  agents=agents)
+    buf = centralized_buffer.PPOCentralizedBuffer(state_shape=state_shape, obs_shape=obs_shape, n_actions=n_actions,
+                                                  max_agents=len(agents), max_cycle=args.max_cycle,
+                                                  buffer_size=local_steps_per_epoch, agents=agents)
 
     def is_terminated(terminated):
         results = []

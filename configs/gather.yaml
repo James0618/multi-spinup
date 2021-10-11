@@ -4,6 +4,7 @@ steps_per_epoch: 40000
 epochs: 500
 centralized: False
 with_state: true
+gcn: true
 
 # Environment Settings
 max_cycle: 80
@@ -15,5 +16,5 @@ attack_food_reward: 1.0
 communication_range: 2
 message_size: 5
 view_range: 6
-vae_observation_dim: 224
+vae_observation_dim: 352
 vae_model: True

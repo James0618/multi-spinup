@@ -238,8 +238,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     state = env.env.state().transpose(2, 0, 1)
 
     ally_policy = policy.Policy(args=args, actor_critic=ac)
-    if proc_id() == 0:
-        state_buf = torch.zeros(20000, 5, 20, 20)
+    # if proc_id() == 0:
+    #     state_buf = torch.zeros(20000, 5, 20, 20)
 
     #     obs_buf = torch.zeros(20000, len(agents), 96)
     #     pos_buf = torch.zeros(20000, len(agents), 2)
@@ -254,14 +254,15 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
             next_obs, rewards, done, next_positions = env.step(actions)
             state = env.env.state().transpose(2, 0, 1)
+
             ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
 
             # save and log
-            if proc_id() == 0:
-                if buf_ptr < 40:
-                    state_buf[buf_ptr + epoch * 40] = torch.from_numpy(state).type(torch.float)
-                    buf_ptr += 1
+            # if proc_id() == 0:
+            #     if buf_ptr < 40:
+            #         state_buf[buf_ptr + epoch * 40] = torch.from_numpy(state).type(torch.float)
+            #         buf_ptr += 1
             #         for agent in rewards.keys():
             #             obs_buf[buf_ptr + epoch * 40, agents.index(agent)] = next_obs[agent]
             #             pos_buf[buf_ptr + epoch * 40, agents.index(agent)] = torch.from_numpy(next_positions[agent])
@@ -319,8 +320,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
         logger.log_tabular('Time', time.time() - start_time)
         logger.dump_tabular()
 
-        if proc_id() == 0:
-            torch.save(state_buf, 'results/state_buf.pth')
+        # if proc_id() == 0:
+        #     torch.save(state_buf, 'results/state_buf.pth')
 
         #     torch.save(obs_buf, 'results/obs_buf.pth')
         #     torch.save(is_alive_buf, 'results/is_alive_buf.pth')

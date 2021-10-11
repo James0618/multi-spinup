@@ -25,17 +25,15 @@ class GatherEnv:
         self.observation_space = self.env.observation_spaces[self.possible_agents[0]]
         self.state_space = self.env.state_space
         self.controlled_group = 'omnivore'
-        self.state_net = torch.load('envs/vae_model/state-vae.pth')
+        self.state_net = torch.load('envs/vae_model/state-vae.pth').cpu()
         self.state = None
         self.with_state = args.with_state
 
     def reset(self):
         observations = self.env.reset()
         state = self.env.state().transpose(2, 0, 1)
-        temp, _, _ = self.state_net.encode(torch.from_numpy(state).type(torch.float).unsqueeze(0))
-        self.state = temp.squeeze().detach()
         if self.with_state:
-            observations, positions = self.preprocessor.preprocess(observations=observations, state=self.state)
+            observations, positions = self.preprocessor.preprocess(observations=observations, state=state, env=self)
         else:
             observations, positions = self.preprocessor.preprocess(observations=observations)
 
@@ -54,11 +52,8 @@ class GatherEnv:
 
         observations, rewards, done, infos = self.env.step(actions)
         state = self.env.state().transpose(2, 0, 1)
-        _, temp, _ = self.state_net.encode(torch.from_numpy(state).type(torch.float).unsqueeze(0))
-        self.state = temp.squeeze().detach()
-
         if self.with_state:
-            observations, positions = self.preprocessor.preprocess(observations=observations, state=self.state)
+            observations, positions = self.preprocessor.preprocess(observations=observations, state=state, env=self)
         else:
             observations, positions = self.preprocessor.preprocess(observations=observations)
 

@@ -9,22 +9,34 @@ class Preprocessor:
         if self.args.vae_model:
             self.vae_model = torch.load('envs/vae_model/gather_vae_model.pth')
 
-    def preprocess(self, observations, state=None):
+    def preprocess(self, observations, state=None, env=None):
         # observation: dict
         result, positions = {}, {}
         for key, value in observations.items():
             image = value[:, :, [0, 1, 2, 4, 5, 7, 8]].transpose(2, 0, 1)
             position = value[0, 0, 7:]
             if self.args.vae_model:
-                if state is not None:
-                    observation = self._vae_observation(image)
-                    result[key] = torch.cat((observation, state))
-                else:
-                    result[key] = self._vae_observation(image)
+                result[key] = self._vae_observation(image)
             else:
                 result[key] = torch.from_numpy(image)
 
             positions[key] = (position * self.args.map_size).astype(np.int)
+
+        if self.args.gcn:
+            is_alive = torch.ones(len(positions))
+            obs_tensor = torch.stack([result[agent] for agent in result.keys()])
+            pos_tensor = torch.stack([torch.from_numpy(positions[agent]) for agent in positions.keys()])
+            _, temp, _ = env.state_net.encode(obs_tensor, is_alive, pos_tensor)
+            state = temp.squeeze().detach()
+            env.state = state
+        else:
+            _, temp, _ = env.state_net.encode(torch.from_numpy(state).type(torch.float).unsqueeze(0))
+            state = temp.squeeze().detach()
+            env.state = state
+
+        if self.args.with_state:
+            for key, value in result.items():
+                result[key] = torch.cat((value, state))
 
         return result, positions
 

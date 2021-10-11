@@ -107,7 +107,13 @@ class _parallel_env(magent_parallel_env, EzPickle):
         pos = []
         for i in range(3):
             for j in range(3):
-                pos.append([center_x + i - 1, center_y + j - 1])
+                if np.abs(i - 1) + np.abs(j - 1) < 2:
+                    pos.append([center_x + i - 1, center_y + j - 1])
+
+        pos.append([10, 17])
+        pos.append([10, 2])
+        pos.append([17, 10])
+        pos.append([2, 10])
 
         env.add_agents(handles[0], method='custom', pos=pos)
 

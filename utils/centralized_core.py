@@ -283,5 +283,3 @@ class StateVAEActorCritic(nn.Module):
 
     def act(self, obs, state):
         return self.step(obs, state)[0]
-
-

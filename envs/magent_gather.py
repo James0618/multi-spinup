@@ -99,67 +99,45 @@ class _parallel_env(magent_parallel_env, EzPickle):
                 pos.append([center_x + side // 2, y])
 
         # agent
+        # pos = []
+        # add_square(pos, map_size * 0.9, 3)
+        # add_square(pos, map_size * 0.8, 4)
+        # add_square(pos, map_size * 0.7, 6)
+        # env.add_agents(handles[0], method="custom", pos=pos)
         pos = []
-        add_square(pos, map_size * 0.9, 3)
-        add_square(pos, map_size * 0.8, 4)
-        add_square(pos, map_size * 0.7, 6)
-        env.add_agents(handles[0], method="custom", pos=pos)
+        for i in range(3):
+            for j in range(3):
+                pos.append([center_x + i - 1, center_y + j - 1])
+
+        env.add_agents(handles[0], method='custom', pos=pos)
 
         # food
+        # pos = []
+        # add_square(pos, map_size * 0.65, 10)
+        # add_square(pos, map_size * 0.6, 10)
+        # add_square(pos, map_size * 0.55, 10)
+        # add_square(pos, map_size * 0.5, 4)
+        # add_square(pos, map_size * 0.45, 3)
+        # add_square(pos, map_size * 0.4, 1)
+        # add_square(pos, map_size * 0.3, 1)
+        # add_square(pos, map_size * 0.3 - 2, 1)
+        # add_square(pos, map_size * 0.3 - 4, 1)
+        # add_square(pos, map_size * 0.3 - 6, 1)
+        # env.add_agents(food_handle, method="custom", pos=pos)
+
         pos = []
-        add_square(pos, map_size * 0.65, 10)
-        add_square(pos, map_size * 0.6, 10)
-        add_square(pos, map_size * 0.55, 10)
-        add_square(pos, map_size * 0.5, 4)
-        add_square(pos, map_size * 0.45, 3)
-        add_square(pos, map_size * 0.4, 1)
-        add_square(pos, map_size * 0.3, 1)
-        add_square(pos, map_size * 0.3 - 2, 1)
-        add_square(pos, map_size * 0.3 - 4, 1)
-        add_square(pos, map_size * 0.3 - 6, 1)
+        pointer = np.random.randint(0, 4)
+        if pointer == 0:
+            for i in range(20):
+                pos.append([1, i])
+        elif pointer == 1:
+            for i in range(20):
+                pos.append([i, 1])
+        elif pointer == 2:
+            for i in range(20):
+                pos.append([map_size - 2, i])
+        else:
+            for i in range(20):
+                pos.append([i, map_size - 2])
+
         env.add_agents(food_handle, method="custom", pos=pos)
-
-        # legend
-        legend = [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-            [1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-            [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0],
-            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0],
-            [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0],
-            [1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0],
-            [1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ]
-
-        org = [
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ]
-
-        def draw(base_x, base_y, scale, data):
-            w, h = len(data), len(data[0])
-            pos = []
-            for i in range(w):
-                for j in range(h):
-                    if data[i][j] == 1:
-                        start_x = i * scale + base_x
-                        start_y = j * scale + base_y
-                        for x in range(start_x, start_x + scale):
-                            for y in range(start_y, start_y + scale):
-                                pos.append([y, x])
-
-            env.add_agents(food_handle, method="custom", pos=pos)
-
-        # scale = 1
-        # w, h = len(legend), len(legend[0])
-        # offset = -3
-        # draw(offset + map_size // 2 - w // 2 * scale, map_size // 2 - h // 2 * scale, scale, legend)
-        # draw(offset + map_size // 2 - w // 2 * scale + len(legend), map_size // 2 - h // 2 * scale, scale, org)

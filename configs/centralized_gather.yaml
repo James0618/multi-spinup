@@ -1,7 +1,7 @@
 # Algorithm Settings
 cpu: 8
-steps_per_epoch: 120000
-epochs: 500
+steps_per_epoch: 20000
+epochs: 1000
 centralized: True
 
 # Environment Settings

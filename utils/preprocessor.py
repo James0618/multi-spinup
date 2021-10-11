@@ -9,14 +9,18 @@ class Preprocessor:
         if self.args.vae_model:
             self.vae_model = torch.load('envs/vae_model/gather_vae_model.pth')
 
-    def preprocess(self, observations):
+    def preprocess(self, observations, state=None):
         # observation: dict
         result, positions = {}, {}
         for key, value in observations.items():
             image = value[:, :, [0, 1, 2, 4, 5, 7, 8]].transpose(2, 0, 1)
             position = value[0, 0, 7:]
             if self.args.vae_model:
-                result[key] = self._vae_observation(image)
+                if state is not None:
+                    observation = self._vae_observation(image)
+                    result[key] = torch.cat((observation, state))
+                else:
+                    result[key] = self._vae_observation(image)
             else:
                 result[key] = torch.from_numpy(image)
 
@@ -25,7 +29,9 @@ class Preprocessor:
         return result, positions
 
     def _vae_observation(self, observation):
-        return self.vae_model.encode(torch.from_numpy(observation).unsqueeze(0))[0].squeeze().detach()
+        result = self.vae_model.encoder(torch.from_numpy(observation).unsqueeze(0))[0]
+        z, mu, log_var = self.vae_model.bottleneck(result)
+        return mu.detach().squeeze()
 
 
 class GraphBuilder:

@@ -40,7 +40,7 @@ def run(exp_name='ppo', config_name='gather'):
 
 
 if __name__ == '__main__':
-    test, centralized = False, True
+    test, centralized = False, False
     t = time.localtime(time.time())
     if centralized:
         experiment = 'gather-centralized-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)

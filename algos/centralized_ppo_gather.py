@@ -9,7 +9,7 @@ from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg
 from spinup.utils.mpi_tools import mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 
 
-def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=4e-4, vf_lr=8e-4,
+def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=5e-4, vf_lr=1e-3,
         train_pi_iters=50, train_v_iters=80, lam=0.97, max_ep_len=1000, actor_critic=centralized_core.VAEActorCritic,
         target_kl=0.05, logger_kwargs=dict(), save_freq=10):
     """
@@ -174,8 +174,8 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
         # Policy loss
         pi, logp = ac.pi(obs, state, act)
-        log_ratio = (logp - logp_old) * is_alive
-        ratio = torch.exp(log_ratio.sum(dim=-1))
+        log_ratio = ((logp - logp_old) * is_alive).sum(dim=-1)
+        ratio = torch.exp(log_ratio)
         clip_adv = torch.clamp(ratio, 1 - clip_ratio, 1 + clip_ratio) * adv
         loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
 

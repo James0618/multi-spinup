@@ -52,7 +52,7 @@ def test_policy(experiment, config_name):
             actions, values, log_probs = ally_policy.choose_action(obs)
 
             env.render()
-            # time.sleep(0.05)
+            time.sleep(0.05)
             next_obs, rewards, done, _ = env.step(actions)
             ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1

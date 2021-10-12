@@ -8,7 +8,7 @@
     "pi_lr":	0.0004,
     "save_freq":	10,
     "seed":	0,
-    "steps_per_epoch":	4000,
+    "steps_per_epoch":	40000,
     "target_kl":	0.01,
     "train_pi_iters":	50,
     "train_v_iters":	50,

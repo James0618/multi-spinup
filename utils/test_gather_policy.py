@@ -37,6 +37,7 @@ def test_policy(experiment, config_name):
     env_args = load_default_config(config_name)
     env = GatherEnv(args=env_args)
     run_args = load_config(config_name, env)
+    env.preprocessor.args = run_args
 
     groups = ['omnivore']
 

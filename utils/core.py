@@ -212,11 +212,18 @@ class VAEActor(Actor):
     def __init__(self, args):
         super(VAEActor, self).__init__()
         self.args = args
-        self.logits_net = nn.Sequential(
-            nn.Linear(args.vae_observation_dim, args.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(args.hidden_dim, args.n_actions),
-        )
+        if self.args.with_state:
+            self.logits_net = nn.Sequential(
+                nn.Linear(args.vae_observation_dim + args.latent_state_shape, args.hidden_dim),
+                nn.ReLU(),
+                nn.Linear(args.hidden_dim, args.n_actions),
+            )
+        else:
+            self.logits_net = nn.Sequential(
+                nn.Linear(args.vae_observation_dim, args.hidden_dim),
+                nn.ReLU(),
+                nn.Linear(args.hidden_dim, args.n_actions),
+            )
 
     def _distribution(self, obs):
         logits = self.logits_net(obs)
@@ -231,11 +238,18 @@ class VAECritic(nn.Module):
         super(VAECritic, self).__init__()
         self.args = args
         # self.feature_net, self.cnn_output_size = cnn(args)
-        self.v_net = nn.Sequential(
-            nn.Linear(args.vae_observation_dim, args.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(args.hidden_dim, 1),
-        )
+        if self.args.with_state:
+            self.v_net = nn.Sequential(
+                nn.Linear(args.vae_observation_dim + args.latent_state_shape, args.hidden_dim),
+                nn.ReLU(),
+                nn.Linear(args.hidden_dim, 1),
+            )
+        else:
+            self.v_net = nn.Sequential(
+                nn.Linear(args.vae_observation_dim, args.hidden_dim),
+                nn.ReLU(),
+                nn.Linear(args.hidden_dim, 1),
+            )
 
     def forward(self, obs):
         return torch.squeeze(self.v_net(obs), -1)  # Critical to ensure v has right shape.

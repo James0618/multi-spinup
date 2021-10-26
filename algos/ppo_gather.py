@@ -134,7 +134,10 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     # Instantiate environment
     env: GatherEnv = env_fn()
     if args.vae_model:
-        obs_shape = torch.Size([args.vae_observation_dim])
+        if args.with_state:
+            obs_shape = torch.Size([args.vae_observation_dim + args.latent_state_shape])
+        else:
+            obs_shape = torch.Size([args.vae_observation_dim])
     else:
         obs_shape = args.observation_shape
 
@@ -239,34 +242,27 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     ally_policy = policy.Policy(args=args, actor_critic=ac)
     # if proc_id() == 0:
-    #     state_buf = torch.zeros(20000, 5, 20, 20)
-
+    #     # state_buf = torch.zeros(20000, 5, 20, 20)
+    #     adj_buf = torch.zeros(20000, len(agents), len(agents))
     #     obs_buf = torch.zeros(20000, len(agents), 96)
     #     pos_buf = torch.zeros(20000, len(agents), 2)
     #     is_alive_buf = torch.zeros(20000, len(agents))
+    #     terminated_buf = torch.zeros(20000)
 
     # Main loop: collect experience in env and update/log each epoch
+    buf_ptr = 0
     for epoch in range(epochs):
         steps_in_buffer = 0
-        buf_ptr = 0
+        if_terminated = 0
         while steps_in_buffer < local_steps_per_epoch:
             actions, values, log_probs = ally_policy.choose_action(obs)
 
             next_obs, rewards, done, next_positions = env.step(actions)
+            # env.render()
             state = env.env.state().transpose(2, 0, 1)
 
             ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
-
-            # save and log
-            # if proc_id() == 0:
-            #     if buf_ptr < 40:
-            #         state_buf[buf_ptr + epoch * 40] = torch.from_numpy(state).type(torch.float)
-            #         buf_ptr += 1
-            #         for agent in rewards.keys():
-            #             obs_buf[buf_ptr + epoch * 40, agents.index(agent)] = next_obs[agent]
-            #             pos_buf[buf_ptr + epoch * 40, agents.index(agent)] = torch.from_numpy(next_positions[agent])
-            #             is_alive_buf[buf_ptr + epoch * 40, agents.index(agent)] = 1
 
             buf.store(obs=obs, act=actions, rew=rewards, val=values, logp=log_probs)
 
@@ -276,6 +272,21 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
             obs = next_obs
 
             terminal = is_terminated(terminated=done)
+
+            # save and log
+            # if proc_id() == 0:
+            #     if if_terminated == 0:
+            #         # state_buf[buf_ptr + epoch * 40] = torch.from_numpy(state).type(torch.float)
+            #         matrix = env.graph_builder.distance_matrix
+            #         adj_buf[buf_ptr] = torch.from_numpy(matrix).type(torch.float)
+            #         for agent in rewards.keys():
+            #             obs_buf[buf_ptr, agents.index(agent)] = next_obs[agent]
+            #             pos_buf[buf_ptr, agents.index(agent)] = torch.from_numpy(next_positions[agent])
+            #             is_alive_buf[buf_ptr, agents.index(agent)] = 1
+            #
+            #         terminated_buf[buf_ptr] = 1 if terminal else 0
+            #         buf_ptr += 1
+
             epoch_ended = steps_in_buffer >= local_steps_per_epoch
 
             if terminal or epoch_ended:
@@ -295,6 +306,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
                 obs, ep_ret, ep_len = env.reset(), 0, 0
+                if_terminated = 1
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
@@ -321,8 +333,9 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
         logger.dump_tabular()
 
         # if proc_id() == 0:
-        #     torch.save(state_buf, 'results/state_buf.pth')
-
+        #     # torch.save(state_buf, 'results/state_buf.pth')
+        #     torch.save(adj_buf, 'results/adj_buf.pth')
         #     torch.save(obs_buf, 'results/obs_buf.pth')
         #     torch.save(is_alive_buf, 'results/is_alive_buf.pth')
         #     torch.save(pos_buf, 'results/pos_buf.pth')
+        #     torch.save(terminated_buf, 'results/terminated_buf.pth')

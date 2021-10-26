@@ -32,7 +32,10 @@ class VAE(nn.Module):
         )
 
         # used for encoder
-        self.fc_mu = nn.Linear(h_dim, z_dim)
+        self.fc_mu = nn.Sequential(
+            nn.Linear(h_dim, z_dim),
+            nn.Tanh()
+        )
         self.fc_log_var = nn.Linear(h_dim, z_dim)
 
         # used for decoder

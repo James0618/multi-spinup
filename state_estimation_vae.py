@@ -5,6 +5,21 @@ from torch_geometric.nn import GCNConv, SAGPooling
 from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
 
 
+def get_neigh(matrix, data, n_neigh):
+    n_agents, data_shape = matrix.shape[-1], data.shape[-1]
+    result = []
+
+    for i in range(n_agents):
+        temp = []
+        for j in range(n_neigh):
+            neigh_data = data[matrix.nonzero().transpose(0, 1).tolist()[1][i * n_neigh + j]]
+            temp.append(neigh_data)
+
+        result.append(torch.stack(temp))
+
+    return torch.stack(result)
+
+
 class UnFlatten(nn.Module):
     def __init__(self, h_dim):
         super(UnFlatten, self).__init__()
@@ -14,11 +29,12 @@ class UnFlatten(nn.Module):
         return inputs.view(inputs.size(0), self.h_dim, 1, 1)
 
 
-class Encoder(torch.nn.Module):
-    def __init__(self, observation_shape, h_dim):
-        super(Encoder, self).__init__()
-        self.num_features = observation_shape
+class NeighNet(torch.nn.Module):
+    def __init__(self, data_shape, h_dim, output_shape):
+        super(NeighNet, self).__init__()
+        self.num_features = data_shape
         self.nhid = h_dim
+        self.output_shape = output_shape
         self.pooling_ratio = 0.3
 
         self.conv1 = GCNConv(self.num_features, self.nhid // 4)
@@ -29,36 +45,20 @@ class Encoder(torch.nn.Module):
         self.lin1 = torch.nn.Sequential(
             torch.nn.Linear(self.nhid * 2, self.nhid),
             torch.nn.ReLU(),
-            torch.nn.Linear(self.nhid, self.nhid)
+            torch.nn.Linear(self.nhid, self.output_shape)
         )
 
-    def forward(self, obs, is_alive):
-        if len(obs.shape) == 2:
-            obs = obs.unsqueeze(0)
-            is_alive = is_alive.unsqueeze(0)
+    def forward(self, data, matrix):
+        n_agents, n_neigh, data_shape = int(matrix.shape[0]), 2, int(data.shape[-1])
 
-        numbers = int(is_alive.sum())
-
-        x = torch.zeros(numbers + obs.shape[0], obs.shape[2])
-        batch = torch.zeros(numbers + obs.shape[0], dtype=torch.long)
-        edge_index = torch.zeros(2, numbers * 2, dtype=torch.long)
-
-        batch_ptr, edge_ptr = 0, 0
-        for i in range(obs.shape[0]):
-            agent_number = int(is_alive[i].sum())
-            fill_slice = slice(batch_ptr + 1, batch_ptr + agent_number + 1)
-
-            x[batch_ptr] = torch.zeros(self.num_features)
-            x[fill_slice] = obs[i][is_alive[i] == 1]
-            batch[batch_ptr] = i
-            batch[fill_slice] = torch.ones(agent_number) * i
-
-            edge_index[1, edge_ptr * 2: edge_ptr * 2 + agent_number] = torch.arange(agent_number) + 1
-            edge_index[0, edge_ptr * 2 + agent_number: (edge_ptr + agent_number) * 2] = torch.arange(agent_number) + 1
-            edge_index[:, edge_ptr * 2: (edge_ptr + agent_number) * 2] += batch_ptr
-
-            batch_ptr += agent_number + 1
-            edge_ptr += agent_number
+        data_neigh = get_neigh(matrix, data, n_neigh=n_neigh)
+        x = torch.cat((data.unsqueeze(1), data_neigh), dim=1).view(-1, data_shape)
+        batch = torch.arange(n_agents).expand(n_neigh + 1, n_agents).transpose(0, 1).contiguous().view(-1)
+        edge_index = torch.tensor([
+            [0] * n_neigh + torch.arange(1, n_neigh + 1).tolist(),
+            torch.arange(1, n_neigh + 1).tolist() + [0] * n_neigh]
+        ).expand(n_agents, 2, -1).transpose(0, 1).contiguous().view(2, -1)
+        edge_index += torch.arange(n_agents).expand(n_neigh * 2, n_agents).transpose(0, 1).contiguous().view(-1)
 
         x = F.relu(self.conv1(x, edge_index))
         x = F.relu(self.conv2(x, edge_index))
@@ -83,10 +83,6 @@ class DecoderPos(nn.Module):
         )
 
     def forward(self, latent_state, positions):
-        agent_num = positions.shape[1]
-        latent_state = latent_state.expand(
-            torch.Size([agent_num, latent_state.shape[0], latent_state.shape[1]])).transpose(0, 1)
-
         inputs = torch.cat((latent_state, positions / 20), dim=-1)
         reconstructed_observations = self.decode_net(inputs)
 
@@ -116,19 +112,37 @@ class Decoder(nn.Module):
         return reconstructed_observations
 
 
-class VAE(nn.Module):
-    def __init__(self, observation_shape=96, h_dim=256, z_dim=64):
-        super(VAE, self).__init__()
-        self.observation_shape, self.h_dim, self.z_dim = observation_shape, h_dim, z_dim
+class Encoder(nn.Module):
+    def __init__(self, obs_shape, hid_shape, h_dim):
+        super(Encoder, self).__init__()
+        self.transition_net = nn.GRUCell(obs_shape, hid_shape)
+        self.obs_net = NeighNet(obs_shape, h_dim, obs_shape)
+        self.hid_net = NeighNet(hid_shape, h_dim, hid_shape)
+        self.encoder = nn.Linear(hid_shape, h_dim)
 
-        self.encoder = Encoder(observation_shape=observation_shape + 2, h_dim=h_dim)
+    def forward(self, obs, hidden_states, matrix):
+        # hidden_states, obs: Tensor[n_agents, data_shape]
+        phi = self.obs_net(obs, matrix)
+        psi = self.hid_net(hidden_states, matrix)
+        next_hid = self.transition_net(phi, psi)
+        latent_state = self.encoder(next_hid)
+
+        return latent_state, next_hid
+
+
+class VAE(nn.Module):
+    def __init__(self, obs_shape=96, hid_shape=128, h_dim=256, z_dim=64):
+        super(VAE, self).__init__()
+        self.observation_shape, self.hid_shape, self.h_dim, self.z_dim = obs_shape, hid_shape, h_dim, z_dim
+
+        self.encoder = Encoder(obs_shape=obs_shape, hid_shape=hid_shape, h_dim=h_dim)
 
         # used for encoder
         self.fc_mu = nn.Linear(h_dim, z_dim)
         self.fc_log_var = nn.Linear(h_dim, z_dim)
 
         # self.decoder = Decoder(observation_shape=observation_shape, h_dim=h_dim, z_dim=z_dim)
-        self.decoder = DecoderPos(observation_shape=observation_shape, h_dim=h_dim, z_dim=z_dim)
+        self.decoder = DecoderPos(observation_shape=obs_shape, h_dim=h_dim, z_dim=z_dim)
 
     def reparameterize(self, mu, log_var):
         std = log_var.mul(0.5).exp_()
@@ -143,17 +157,16 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, log_var)
         return z, mu, log_var
 
-    def encode(self, observations, is_alive, positions):
-        observations = torch.cat((observations, positions / 20), dim=-1)
-        h = self.encoder(observations, is_alive)
-        z, mu, log_var = self.bottleneck(h)
-        return z, mu, log_var
+    def encode(self, observations, hidden_states, matrix):
+        latent_h, next_hid = self.encoder(observations, hidden_states, matrix)
+        z, mu, log_var = self.bottleneck(latent_h)
+        return z, next_hid, mu, log_var
 
     def decode(self, z, pos):
         z = self.decoder(z, pos)
         return z
 
-    def forward(self, obs, is_alive, pos):
-        z, mu, log_var = self.encode(obs, is_alive, pos)
+    def forward(self, obs, matrix, hid, pos):
+        z, next_hid, mu, log_var = self.encode(obs, hid, matrix)
         z = self.decode(z, pos)
-        return z, mu, log_var
+        return z, next_hid, mu, log_var

@@ -19,6 +19,7 @@ plot_topology: False
 message_size: 5
 communicate: False
 view_range: 8
+min_neigh: 2
 
 # GCN Settings
 pooling_ratio: 0.4

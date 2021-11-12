@@ -275,7 +275,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
             # save and log
             # if proc_id() == 0:
-            #     if if_terminated == 0:
+            #     if if_terminated < 1:
             #         # state_buf[buf_ptr + epoch * 40] = torch.from_numpy(state).type(torch.float)
             #         matrix = env.graph_builder.distance_matrix
             #         adj_buf[buf_ptr] = torch.from_numpy(matrix).type(torch.float)
@@ -306,7 +306,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
                 obs, ep_ret, ep_len = env.reset(), 0, 0
-                if_terminated = 1
+                if_terminated += 1
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):

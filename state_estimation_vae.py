@@ -5,19 +5,53 @@ from torch_geometric.nn import GCNConv, SAGPooling
 from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
 
 
-def get_neigh(matrix, data, n_neigh):
+def process_matrix(matrix, min_neigh):
+    n_agents = matrix.shape[0]
+    temp = torch.arange(n_agents).tolist()
+
+    min_matrix = torch.zeros_like(matrix)
+    for i in range(min_neigh):
+        min_index = matrix.argmin(dim=-1).tolist()
+        min_matrix[temp, min_index] = 1
+        matrix[temp, min_index] += 1000
+        min_matrix[min_index, temp] = 1
+        matrix[min_index, temp] += 1000
+
+    return min_matrix
+
+
+def get_neigh(matrix, data, min_neigh=2):
+    matrix = process_matrix(matrix, min_neigh)
+
     n_agents, data_shape = matrix.shape[-1], data.shape[-1]
     result = []
 
+    n_neigh, ptr = matrix.sum(-1).cpu(), 0
+    neighs = matrix.nonzero().transpose(0, 1).tolist()[1]
     for i in range(n_agents):
-        temp = []
-        for j in range(n_neigh):
-            neigh_data = data[matrix.nonzero().transpose(0, 1).tolist()[1][i * n_neigh + j]]
-            temp.append(neigh_data)
+        index = neighs[ptr: ptr + n_neigh[i]]
+        neigh_data = data[index]
+        all_data = torch.cat((data[i].unsqueeze(0), neigh_data))
 
-        result.append(torch.stack(temp))
+        result.append(all_data)
+        ptr += n_neigh[i]
 
-    return torch.stack(result)
+    x = torch.cat(result)
+    batch = torch.zeros(x.shape[0]).type(torch.long)
+    edge_index = torch.zeros(2, sum(n_neigh) * 2).type(torch.long)
+
+    batch_ptr, edge_ptr = 0, 0
+    for i in range(n_agents):
+        batch[batch_ptr: batch_ptr + n_neigh[i] + 1] = i
+
+        edge_index[1, edge_ptr: edge_ptr + n_neigh[i]] = torch.arange(n_neigh[i]) + 1
+        edge_index[0, edge_ptr + n_neigh[i]: edge_ptr + 2 * n_neigh[i]] = torch.arange(n_neigh[i]) + 1
+        edge_index[:, edge_ptr: edge_ptr + 2 * n_neigh[i]] += int(edge_ptr / 2 + i)
+
+        edge_ptr += 2 * n_neigh[i]
+        batch_ptr += n_neigh[i] + 1
+
+    return x, batch, edge_index
 
 
 class UnFlatten(nn.Module):
@@ -49,16 +83,7 @@ class NeighNet(torch.nn.Module):
         )
 
     def forward(self, data, matrix):
-        n_agents, n_neigh, data_shape = int(matrix.shape[0]), 2, int(data.shape[-1])
-
-        data_neigh = get_neigh(matrix, data, n_neigh=n_neigh)
-        x = torch.cat((data.unsqueeze(1), data_neigh), dim=1).view(-1, data_shape)
-        batch = torch.arange(n_agents).expand(n_neigh + 1, n_agents).transpose(0, 1).contiguous().view(-1)
-        edge_index = torch.tensor([
-            [0] * n_neigh + torch.arange(1, n_neigh + 1).tolist(),
-            torch.arange(1, n_neigh + 1).tolist() + [0] * n_neigh]
-        ).expand(n_agents, 2, -1).transpose(0, 1).contiguous().view(2, -1)
-        edge_index += torch.arange(n_agents).expand(n_neigh * 2, n_agents).transpose(0, 1).contiguous().view(-1)
+        x, batch, edge_index = get_neigh(matrix, data)
 
         x = F.relu(self.conv1(x, edge_index))
         x = F.relu(self.conv2(x, edge_index))
@@ -148,8 +173,8 @@ class VAE(nn.Module):
         std = log_var.mul(0.5).exp_()
         # return torch.normal(mu, std)
         esp = torch.randn(*mu.size())
-
         z = mu + std * esp
+
         return z
 
     def bottleneck(self, h):

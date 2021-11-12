@@ -1,6 +1,6 @@
 {
     "clip_ratio":	0.2,
-    "epochs":	500,
+    "epochs":	250,
     "exp_name":	"gather-ppo-10-26",
     "gamma":	0.995,
     "lam":	0.97,

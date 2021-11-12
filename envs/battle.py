@@ -118,25 +118,3 @@ class BattleEnv:
 
     def close(self):
         self.env.close()
-
-    def communicate(self, agents):
-        accessible_agents = self.graph_builder.accessible_agents
-        temp = {agent: np.zeros(self.args.message_size) for agent in agents}
-        for agent in agents:
-            accessible_agent = accessible_agents[agent]
-            for other_agent in accessible_agent:
-                temp[agent] += self.message[other_agent]
-
-            temp[agent] -= np.matmul(temp[agent], self.message[agent])
-            temp[agent] -= self.message[agent] * sum(self.graph_builder.adjacency_matrix[
-                                                         self.possible_agents.index(agent)])
-
-        for agent in agents:
-            self.message[agent] -= temp[agent] * 0.05
-            # self.message[agent] = np.exp(self.message[agent]) / sum(np.exp(self.message[agent]))
-
-        show_array = np.zeros((len(agents), self.args.message_size))
-        for i, agent in enumerate(agents):
-            show_array[i] = self.message[agent]
-
-        print('End Communication!')

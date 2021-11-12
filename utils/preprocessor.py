@@ -60,11 +60,6 @@ class Preprocessor:
 
         return obs_with_zero_state
 
-    # def _vae_observation(self, observation):
-    #     result = self.vae_model.encoder(torch.from_numpy(observation).unsqueeze(0))[0]
-    #     z, mu, log_var = self.vae_model.bottleneck(result)
-    #     return mu.detach().squeeze()
-
     def _vae_observation(self, images):
         image_tensor = torch.zeros(len(images), *self.args.observation_shape)
         for i, key in enumerate(images.keys()):

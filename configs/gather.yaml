@@ -1,15 +1,15 @@
 # Algorithm Settings
-cpu: 8
-steps_per_epoch: 120000
-epochs: 500
+cpu: 1
+steps_per_epoch: 5000
+epochs: 2000
 centralized: false
-with_state: false
+with_state: true
 zero_state: false
-gcn: false
+gcn: true
 
 # Environment Settings
 max_cycle: 80
-map_size: 20
+map_size: 40
 step_reward: -0.05
 dead_penalty: -0.5
 attack_penalty: -0.1
@@ -20,5 +20,5 @@ view_range: 6
 vae_model: true
 
 vae_observation_dim: 96
-hid_shape: 128
-latent_state_shape: 96
+hid_shape: 160
+latent_state_shape: 128

@@ -1,3 +1,4 @@
+import copy
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -82,17 +83,21 @@ class GraphBuilder:
         self.min_neigh = args.min_neigh
         self.num_agents = len(agents)
         self.adjacency_matrix, self.min_matrix, self.distance_matrix, self.accessible_agents = None, None, None, None
+        self.all_direction_matrix = None
 
     def reset(self):
         self.adjacency_matrix = np.zeros((self.num_agents, self.num_agents), dtype=np.int)
-        self.distance_matrix = np.ones((self.num_agents, self.num_agents),
-                                       dtype=np.int) * 1000
+        self.distance_matrix = np.ones((self.num_agents, self.num_agents), dtype=np.int) * 1000
+        self.all_direction_matrix = np.ones((4, self.num_agents, self.num_agents), dtype=np.int) * 1000
         self.accessible_agents = {}
 
     def change_side(self, agents):
         self.possible_agents = agents
 
     def build_graph(self, positions):
+        self.distance_matrix = np.ones((self.num_agents, self.num_agents), dtype=np.int) * 1000
+        self.all_direction_matrix = np.ones((4, self.num_agents, self.num_agents), dtype=np.int) * 1000
+
         for agent in positions.keys():
             agent_id = self.possible_agents.index(agent)
             agent_position = positions[agent]
@@ -104,8 +109,25 @@ class GraphBuilder:
                     self.distance_matrix[agent_id, other_agent_id] = distance
                     self.distance_matrix[other_agent_id, agent_id] = distance
 
+        for agent in positions.keys():
+            agent_id = self.possible_agents.index(agent)
+            agent_position = positions[agent]
+            for other_agent in positions.keys():
+                if other_agent is not agent:
+                    other_agent_id = self.possible_agents.index(other_agent)
+                    other_agent_position = positions[other_agent]
+                    distance = max(abs(agent_position - other_agent_position))
+                    if other_agent_position[0] < agent_position[0]:
+                        self.all_direction_matrix[0, agent_id, other_agent_id] = distance
+                    if other_agent_position[0] > agent_position[0]:
+                        self.all_direction_matrix[1, agent_id, other_agent_id] = distance
+                    if other_agent_position[1] < agent_position[1]:
+                        self.all_direction_matrix[2, agent_id, other_agent_id] = distance
+                    if other_agent_position[1] > agent_position[1]:
+                        self.all_direction_matrix[3, agent_id, other_agent_id] = distance
+
         self._get_adjacency_matrix()
-        # self._get_accessible_agents(agents=list(positions.keys()))
+        self._get_accessible_agents(agents=list(positions.keys()))
 
     def get_communication_topology(self, state, positions, controlled_group):
         for agent in self.accessible_agents.keys():
@@ -123,14 +145,21 @@ class GraphBuilder:
             plt.show()
 
     def _get_adjacency_matrix(self):
-        self.adjacency_matrix = (self.distance_matrix <= self.args.communication_range).astype(np.int)
+        n_agents = self.distance_matrix.shape[0]
+        temp = torch.arange(n_agents).tolist()
+        temp_matrix = copy.deepcopy(self.all_direction_matrix)
+        all_min_matrix = np.zeros((n_agents, n_agents))
 
-        temp = torch.arange(self.num_agents).tolist()
-        self.min_matrix = np.zeros_like(self.adjacency_matrix)
-        for i in range(self.min_neigh):
-            min_index = self.distance_matrix.argmin(axis=-1)
-            self.min_matrix[temp, min_index.tolist()] = 1
-            self.distance_matrix[temp, min_index.tolist()] += 1000
+        for i in range(4):
+            min_index = temp_matrix[i].argmin(-1).tolist()
+            invalid_temp = (temp_matrix[i, temp, min_index] > self.args.map_size).nonzero()[0].tolist()
+            invalid_index = np.array(min_index)[invalid_temp].tolist()
+            all_min_matrix[temp, min_index] = 1
+            all_min_matrix[min_index, temp] = 1
+            all_min_matrix[invalid_temp, invalid_index] = 0
+            all_min_matrix[invalid_index, invalid_temp] = 0
+
+        self.adjacency_matrix = all_min_matrix.astype(np.int)
 
     def _get_accessible_agents(self, agents):
         for agent in agents:

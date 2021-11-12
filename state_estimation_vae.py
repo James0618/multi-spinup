@@ -21,7 +21,7 @@ def process_matrix(matrix, min_neigh):
 
 
 def get_neigh(matrix, data, min_neigh=2):
-    matrix = process_matrix(matrix, min_neigh)
+    # matrix = process_matrix(matrix, min_neigh)
 
     n_agents, data_shape = matrix.shape[-1], data.shape[-1]
     result = []

@@ -46,7 +46,7 @@ class GatherEnv:
             else:
                 observations, self.hidden_states = self.preprocessor.add_state(
                     env=self, obs=observations, hid_states=self.hidden_states,
-                    matrix=self.graph_builder.distance_matrix, state=state)
+                    matrix=self.graph_builder.adjacency_matrix, state=state)
 
         self.graph_builder.reset()
         self.graph_builder.build_graph(positions=positions)
@@ -73,7 +73,7 @@ class GatherEnv:
             else:
                 observations, self.hidden_states = self.preprocessor.add_state(
                     env=self, obs=observations, hid_states=self.hidden_states,
-                    matrix=self.graph_builder.distance_matrix, state=state)
+                    matrix=self.graph_builder.adjacency_matrix, state=state)
 
         if self.args.plot_topology:
             self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions,

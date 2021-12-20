@@ -69,17 +69,17 @@ class NeighNet(torch.nn.Module):
         self.num_features = data_shape
         self.nhid = h_dim
         self.output_shape = output_shape
-        self.pooling_ratio = 0.3
+        self.pooling_ratio = 0.2
 
         self.conv1 = GCNConv(self.num_features, self.nhid // 4)
         self.conv2 = GCNConv(self.nhid // 4, self.nhid)
         # self.conv3 = GCNConv(self.nhid // 2, self.nhid)
         self.pool1 = SAGPooling(self.nhid, ratio=self.pooling_ratio)
 
-        self.lin1 = torch.nn.Sequential(
-            torch.nn.Linear(self.nhid * 2, self.nhid),
-            torch.nn.ReLU(),
-            torch.nn.Linear(self.nhid, self.output_shape)
+        self.lin1 = nn.Sequential(
+            nn.Linear(self.nhid * 2, self.nhid),
+            nn.ReLU(),
+            nn.Linear(self.nhid, self.output_shape),
         )
 
     def forward(self, data, matrix):
@@ -90,10 +90,43 @@ class NeighNet(torch.nn.Module):
         # x = F.relu(self.conv3(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
         x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
-        x = x1
-        x = self.lin1(x)
+
+        x = self.lin1(x1)
 
         return x
+
+
+# class NeighNet(nn.Module):
+#     def __init__(self, data_shape, h_dim, output_shape):
+#         super(NeighNet, self).__init__()
+#         self.num_features = data_shape
+#         self.nhid = h_dim
+#         self.output_shape = output_shape
+#         self.pooling_ratio = 0.3
+#
+#         self.conv1 = GCNConv(self.num_features, self.nhid // 4)
+#         self.conv2 = GCNConv(self.nhid // 4, self.nhid)
+#         # self.conv3 = GCNConv(self.nhid // 2, self.nhid)
+#         self.pool1 = SAGPooling(self.nhid, ratio=self.pooling_ratio)
+#
+#         self.lin1 = torch.nn.Sequential(
+#             nn.Linear(self.nhid * 2, self.nhid),
+#             nn.ReLU(),
+#             nn.Linear(self.nhid, self.output_shape)
+#         )
+#
+#     def forward(self, data, matrix):
+#         x, batch, edge_index = get_neigh(matrix, data)
+#
+#         x = F.relu(self.conv1(x, edge_index))
+#         x = F.relu(self.conv2(x, edge_index))
+#         # x = F.relu(self.conv3(x, edge_index))
+#         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
+#         x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
+#         x = x1
+#         x = self.lin1(x)
+#
+#         return x
 
 
 class DecoderPos(nn.Module):
@@ -108,7 +141,7 @@ class DecoderPos(nn.Module):
         )
 
     def forward(self, latent_state, positions):
-        inputs = torch.cat((latent_state, positions / 20), dim=-1)
+        inputs = torch.cat((latent_state, positions), dim=-1)
         reconstructed_observations = self.decode_net(inputs)
 
         return reconstructed_observations
@@ -163,6 +196,10 @@ class VAE(nn.Module):
         self.encoder = Encoder(obs_shape=obs_shape, hid_shape=hid_shape, h_dim=h_dim)
 
         # used for encoder
+        # self.fc_mu = nn.Sequential(
+        #     nn.Linear(h_dim, z_dim),
+        #     nn.Tanh()
+        # )
         self.fc_mu = nn.Linear(h_dim, z_dim)
         self.fc_log_var = nn.Linear(h_dim, z_dim)
 
@@ -185,6 +222,7 @@ class VAE(nn.Module):
     def encode(self, observations, hidden_states, matrix):
         latent_h, next_hid = self.encoder(observations, hidden_states, matrix)
         z, mu, log_var = self.bottleneck(latent_h)
+        # mu = torch.tanh(mu)
         return z, next_hid, mu, log_var
 
     def decode(self, z, pos):

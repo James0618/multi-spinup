@@ -1,6 +1,8 @@
+import os
 import torch
 import numpy as np
 import yaml
+import json
 from types import SimpleNamespace
 
 
@@ -20,7 +22,7 @@ def load_default_config(name):
     return args
 
 
-def load_config(name, env):
+def load_config(name, env, output_path='/home/drl/PycharmProjects/multi-spinup/results/', exp_name='ppo'):
     with open('configs/default.yaml') as f:
         default_config = yaml.safe_load(f)
 
@@ -36,7 +38,7 @@ def load_config(name, env):
     temp = torch.zeros(3).type(torch.int)
     temp[0], temp[1], temp[2] = int(state_shape[2]) - 2, int(state_shape[0]), int(state_shape[1])
     state_shape = torch.Size(temp)
-    n_actions = env.action_space.n
+    n_actions = int(env.action_space.n)
 
     temp = torch.zeros(3).type(torch.int)
     temp[0], temp[1], temp[2] = int(observation_shape[2] - 2), int(observation_shape[0]), int(observation_shape[1])
@@ -49,10 +51,21 @@ def load_config(name, env):
     config['state_shape'] = state_shape
     config['n_actions'] = n_actions
 
-    config['max_agents'] = {
-        'red': np.array(['red' in agent for agent in env.possible_agents]).sum(),
-        'blue': np.array(['blue' in agent for agent in env.possible_agents]).sum(),
-    }
+    if not os.path.exists(output_path + exp_name):
+        os.makedirs(output_path + exp_name)
+
+    with open(output_path + exp_name + '/full-config.json', 'w') as f:
+        saved_config = {}
+        for key in config.keys():
+            if (type(config[key]) is np.int) or (type(config[key]) is torch.int):
+                saved_config[key] = int(config[key])
+            elif type(config[key]) is torch.Size:
+                saved_config[key] = str(config[key])
+            elif type(config[key]) is list:
+                saved_config[key] = [str(element) for element in config[key]]
+            else:
+                saved_config[key] = config[key]
+        f.write(json.dumps(saved_config, indent=4))
 
     args = SimpleNamespace(**config)
 

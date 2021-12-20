@@ -36,7 +36,8 @@ def test_policy(experiment, config_name):
     actor_critic = load_model(args=args)
     env_args = load_default_config(config_name)
     env = GatherEnv(args=env_args)
-    run_args = load_config(config_name, env)
+    run_args = load_config(config_name, env, output_path='/home/drl/PycharmProjects/multi-spinup/results/',
+                           exp_name=experiment)
     env.preprocessor.args = run_args
 
     groups = ['omnivore']

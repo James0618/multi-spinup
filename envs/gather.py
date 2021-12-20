@@ -48,9 +48,6 @@ class GatherEnv:
                     env=self, obs=observations, hid_states=self.hidden_states,
                     matrix=self.graph_builder.adjacency_matrix, state=state)
 
-        self.graph_builder.reset()
-        self.graph_builder.build_graph(positions=positions)
-
         if self.args.plot_topology:
             self.graph_builder.get_communication_topology(state=self.env.state(), positions=positions,
                                                           controlled_group=self.controlled_group)
@@ -61,6 +58,14 @@ class GatherEnv:
         assert type(actions) is dict
 
         observations, rewards, done, infos = self.env.step(actions)
+        if self.args.global_reward:
+            total_reward = 0
+            for key in rewards.keys():
+                total_reward += rewards[key]
+
+            for key in rewards.keys():
+                rewards[key] = total_reward
+
         state = self.env.state().transpose(2, 0, 1)
         observations, positions = self.preprocessor.preprocess(observations=observations)
 

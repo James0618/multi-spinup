@@ -261,7 +261,10 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
             # env.render()
             state = env.env.state().transpose(2, 0, 1)
 
-            ep_ret += sum([rewards[agent] for agent in rewards.keys()])
+            if args.global_reward:
+                ep_ret += sum([rewards[agent] for agent in rewards.keys()]) / len(rewards)
+            else:
+                ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
 
             buf.store(obs=obs, act=actions, rew=rewards, val=values, logp=log_probs)

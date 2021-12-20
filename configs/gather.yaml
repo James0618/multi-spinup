@@ -2,10 +2,10 @@
 cpu: 8
 steps_per_epoch: 40000
 epochs: 2000
-centralized: false
 with_state: true
 zero_state: false
 gcn: true
+hidden_dim: 128
 
 # Environment Settings
 max_cycle: 80
@@ -19,6 +19,7 @@ min_neigh: 1
 message_size: 5
 view_range: 6
 vae_model: true
+global_reward: true
 
 vae_observation_dim: 96
 hid_shape: 160

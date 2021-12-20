@@ -1,3 +1,4 @@
+import os
 import time
 from spinup.utils.mpi_tools import mpi_fork
 from algos.ppo_gather import ppo
@@ -30,14 +31,14 @@ def run(exp_name='ppo', config_name='gather'):
 
 
 if __name__ == '__main__':
-    test, centralized = False, False
+    test = False
+
+    device_id = 0
+    os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(device_id)
+
     t = time.localtime(time.time())
-    if centralized:
-        experiment = 'gather-centralized-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
-        config_name = 'centralized_gather'
-    else:
-        experiment = 'gather-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
-        config_name = 'gather'
+    experiment = 'gather-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
+    config_name = 'gather'
     # experiment = 'gather-ppo-{}-{}'.format(9, 23)
     if test:
         test_policy(experiment=experiment, config_name=config_name)

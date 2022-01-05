@@ -35,11 +35,11 @@ class GatherEnv:
         state = self.env.state().transpose(2, 0, 1)
         observations, positions = self.preprocessor.preprocess(observations=observations)
 
+        self.graph_builder.reset()
+        self.graph_builder.build_graph(positions=positions)
+
         if self.args.with_state:
             self.hidden_states = {agent: torch.zeros(self.args.hid_shape) for agent in self.possible_agents}
-
-            self.graph_builder.reset()
-            self.graph_builder.build_graph(positions=positions)
 
             if self.args.zero_state:
                 observations = self.preprocessor.add_zero_state(env=self, obs=observations)
@@ -69,10 +69,10 @@ class GatherEnv:
         state = self.env.state().transpose(2, 0, 1)
         observations, positions = self.preprocessor.preprocess(observations=observations)
 
-        if self.args.with_state:
-            self.graph_builder.reset()
-            self.graph_builder.build_graph(positions=positions)
+        self.graph_builder.reset()
+        self.graph_builder.build_graph(positions=positions)
 
+        if self.args.with_state:
             if self.args.zero_state:
                 observations = self.preprocessor.add_zero_state(env=self, obs=observations)
             else:

@@ -16,7 +16,7 @@ def run(exp_name='ppo', config_name='gather'):
         'output_dir': output_path + '{}'.format(exp_name)
     }
 
-    dgn(lambda: GatherEnv(args=args), args=args, gamma=args.gamma, logger_kwargs=logger_kwargs)
+    dgn(lambda: GatherEnv(args=args), args=args, logger_kwargs=logger_kwargs)
 
 
 if __name__ == '__main__':

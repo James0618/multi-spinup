@@ -21,7 +21,7 @@
     "pooling_ratio": 0.4,
     "nhid": 128,
     "batch_size": 128,
-    "n_episode": 100000,
+    "n_episode": 200000,
     "n_epoch": 5,
     "capacity": 10000,
     "update_interval": 200,

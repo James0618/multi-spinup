@@ -6,7 +6,7 @@ from utils import core, policy, buffer
 from envs.gather import GatherEnv
 from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
-from spinup.utils.mpi_tools import mpi_avg, proc_id, mpi_statistics_scalar, num_procs
+from spinup.utils.mpi_tools import mpi_avg, mpi_sum, proc_id, mpi_statistics_scalar, num_procs
 
 
 def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=4e-4, vf_lr=8e-4,
@@ -251,9 +251,11 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
 
     # Main loop: collect experience in env and update/log each epoch
     buf_ptr = 0
+    total_episode_num = 0
     for epoch in range(epochs):
         steps_in_buffer = 0
         if_terminated = 0
+        episode_num = 0
         while steps_in_buffer < local_steps_per_epoch:
             actions, values, log_probs = ally_policy.choose_action(obs)
 
@@ -308,9 +310,13 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
+                    episode_num += 1
+
                 obs, ep_ret, ep_len = env.reset(), 0, 0
                 if_terminated += 1
 
+        logger.store(EpNum=total_episode_num + mpi_sum(episode_num))
+        total_episode_num += mpi_sum(episode_num)
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
             logger.save_state({'env': env}, None)
@@ -323,6 +329,7 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
         logger.log_tabular('Epoch', epoch)
         logger.log_tabular('EpRet', with_min_and_max=True)
         logger.log_tabular('EpLen', average_only=True)
+        logger.log_tabular('EpNum', average_only=True)
         logger.log_tabular('TotalEnvInteracts', (epoch + 1) * steps_per_epoch)
         logger.log_tabular('LossPi', average_only=True)
         logger.log_tabular('LossV', average_only=True)

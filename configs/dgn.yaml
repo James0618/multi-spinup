@@ -1,11 +1,13 @@
 batch_size: 128
-n_episode: 100000
+n_episode: 200000
 n_epoch: 5
-capacity: 100000
+capacity: 10000
+update_interval: 200
 
 vae_model: true
-max_cycle: 80
-map_size: 40
+max_cycle: 60
+map_size: 15
+view_range: 6
 step_reward: -0.05
 dead_penalty: -0.5
 attack_penalty: -0.1
@@ -13,5 +15,9 @@ attack_food_reward: 1.0
 
 with_state: false
 zero_state: false
+global_reward: false
 
 vae_observation_dim: 96
+hidden_dim: 128
+save_interval: 100
+random_episode: 100

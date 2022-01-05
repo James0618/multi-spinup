@@ -100,55 +100,55 @@ class _parallel_env(magent_parallel_env, EzPickle):
                 pos.append([center_x + side // 2, y])
 
         # agent
-        # pos = []
-        # add_square(pos, map_size * 0.9, 3)
+        pos = []
+        add_square(pos, map_size * 0.9, 3)
         # add_square(pos, map_size * 0.8, 4)
         # add_square(pos, map_size * 0.7, 6)
-        # env.add_agents(handles[0], method="custom", pos=pos)
-        #
-        # # food
+        env.add_agents(handles[0], method="custom", pos=pos)
+
+        # food
+        pos = []
+        add_square(pos, map_size * 0.65, 10)
+        add_square(pos, map_size * 0.6, 10)
+        add_square(pos, map_size * 0.55, 10)
+        add_square(pos, map_size * 0.5, 4)
+        add_square(pos, map_size * 0.45, 3)
+        add_square(pos, map_size * 0.4, 1)
+        # add_square(pos, map_size * 0.3, 1)
+        add_square(pos, map_size * 0.3 - 2, 1)
+        # add_square(pos, map_size * 0.3 - 4, 1)
+        add_square(pos, map_size * 0.3 - 6, 1)
+        env.add_agents(food_handle, method="custom", pos=pos)
+
+        # # agents
         # pos = []
-        # add_square(pos, map_size * 0.65, 10)
-        # add_square(pos, map_size * 0.6, 10)
-        # add_square(pos, map_size * 0.55, 10)
-        # add_square(pos, map_size * 0.5, 4)
-        # add_square(pos, map_size * 0.45, 3)
-        # add_square(pos, map_size * 0.4, 1)
-        # # add_square(pos, map_size * 0.3, 1)
-        # add_square(pos, map_size * 0.3 - 2, 1)
-        # # add_square(pos, map_size * 0.3 - 4, 1)
-        # add_square(pos, map_size * 0.3 - 6, 1)
-        # env.add_agents(food_handle, method="custom", pos=pos)
-
-        # agents
-        pos = []
-        for i in range(3):
-            for j in range(3):
-                if np.abs(i - 1) + np.abs(j - 1) < 2:
-                    pos.append([center_x + i - 1, center_y + j - 1])
-
-        pos.append([map_size // 2, map_size - 3])
-        pos.append([map_size // 2, 2])
-        pos.append([map_size - 3, map_size // 2])
-        pos.append([2, map_size // 2])
-
-        env.add_agents(handles[0], method='custom', pos=pos)
-
-        # foods
-        pos = []
-        pointer = self.pointer % 4
-        self.pointer += 1
-        if pointer == 0:
-            for i in range(map_size):
-                pos.append([1, i])
-        elif pointer == 1:
-            for i in range(map_size):
-                pos.append([i, 1])
-        elif pointer == 2:
-            for i in range(map_size):
-                pos.append([map_size - 2, i])
-        else:
-            for i in range(map_size):
-                pos.append([i, map_size - 2])
+        # for i in range(3):
+        #     for j in range(3):
+        #         if np.abs(i - 1) + np.abs(j - 1) < 2:
+        #             pos.append([center_x + i - 1, center_y + j - 1])
+        #
+        # pos.append([map_size // 2, map_size - 3])
+        # pos.append([map_size // 2, 2])
+        # pos.append([map_size - 3, map_size // 2])
+        # pos.append([2, map_size // 2])
+        #
+        # env.add_agents(handles[0], method='custom', pos=pos)
+        #
+        # # foods
+        # pos = []
+        # pointer = self.pointer % 4
+        # self.pointer += 1
+        # if pointer == 0:
+        #     for i in range(map_size):
+        #         pos.append([1, i])
+        # elif pointer == 1:
+        #     for i in range(map_size):
+        #         pos.append([i, 1])
+        # elif pointer == 2:
+        #     for i in range(map_size):
+        #         pos.append([map_size - 2, i])
+        # else:
+        #     for i in range(map_size):
+        #         pos.append([i, map_size - 2])
 
         env.add_agents(food_handle, method="custom", pos=pos)

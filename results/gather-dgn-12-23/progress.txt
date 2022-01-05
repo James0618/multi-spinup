@@ -1,2 +1,0 @@
-Episode	AverageEpRet	StdEpRet	MaxEpRet	MinEpRet	EpLen
-20	-41.47	1.874793	-36.4	-44.7	80.0

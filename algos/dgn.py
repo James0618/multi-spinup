@@ -118,8 +118,8 @@ def train(buff, args, model, model_tar, n_agent, optimizer):
     matrix = batch[4]
     next_matrix = batch[5]
     done = batch[6].cuda()
-    # is_alives = batch[7].cuda()
-    # next_is_alives = batch[8].cuda()
+    is_alives = batch[7].cuda()
+    next_is_alives = batch[8].cuda()
 
     q_values = model(observations.cuda(), matrix.cuda())
     target_q_values = model_tar(next_observations.cuda(), next_matrix.cuda()).max(dim=2)[0].detach()
@@ -130,6 +130,11 @@ def train(buff, args, model, model_tar, n_agent, optimizer):
     expected_q[x, y, z] = reward[x, y] + (1 - done[x]) * args.gamma * target_q_values[x, y]
 
     loss = (q_values[x, y, z] - expected_q[x, y, z]).pow(2).mean()
+
+    q_values = q_values * np.expand_dims(is_alives, -1)
+    expected_q = expected_q * np.expand_dims(next_is_alives, -1)
+    delta = q_values[x, y, z] - expected_q[x, y, z]
+
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()

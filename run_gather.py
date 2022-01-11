@@ -34,12 +34,13 @@ if __name__ == '__main__':
     test = False
 
     device_id = 1
+    experiment_id = 0
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(device_id)
 
     t = time.localtime(time.time())
-    experiment = 'gather-ppo-{}-{}'.format(t.tm_mon, t.tm_mday)
+    experiment = 'gather-ppo-{}-{}/{}'.format(t.tm_mon, t.tm_mday, experiment_id)
     config_name = 'gather'
-    # experiment = 'gather-ppo-{}-{}'.format(9, 23)
+    # experiment = 'gather-ppo-{}-{}/0'.format(1, 8)
     if test:
         test_policy(experiment=experiment, config_name=config_name)
     else:

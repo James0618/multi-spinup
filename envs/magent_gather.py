@@ -85,6 +85,11 @@ class _parallel_env(magent_parallel_env, EzPickle):
         super().__init__(env, handles[1:], names, map_size, max_cycles, reward_range, minimap_mode, extra_features)
 
     def generate_map(self):
+        self.generate_random_map()
+        # self.generate_edge_map()
+        # self.generate_normal_map()
+
+    def generate_normal_map(self):
         env, map_size = self.env, self.map_size
         handles = env.get_handles()[1:]
         food_handle = env.get_handles()[0]
@@ -120,35 +125,102 @@ class _parallel_env(magent_parallel_env, EzPickle):
         add_square(pos, map_size * 0.3 - 6, 1)
         env.add_agents(food_handle, method="custom", pos=pos)
 
-        # # agents
-        # pos = []
-        # for i in range(3):
-        #     for j in range(3):
-        #         if np.abs(i - 1) + np.abs(j - 1) < 2:
-        #             pos.append([center_x + i - 1, center_y + j - 1])
-        #
-        # pos.append([map_size // 2, map_size - 3])
-        # pos.append([map_size // 2, 2])
-        # pos.append([map_size - 3, map_size // 2])
-        # pos.append([2, map_size // 2])
-        #
-        # env.add_agents(handles[0], method='custom', pos=pos)
-        #
-        # # foods
-        # pos = []
-        # pointer = self.pointer % 4
-        # self.pointer += 1
-        # if pointer == 0:
-        #     for i in range(map_size):
-        #         pos.append([1, i])
-        # elif pointer == 1:
-        #     for i in range(map_size):
-        #         pos.append([i, 1])
-        # elif pointer == 2:
-        #     for i in range(map_size):
-        #         pos.append([map_size - 2, i])
-        # else:
-        #     for i in range(map_size):
-        #         pos.append([i, map_size - 2])
+    def generate_random_map(self):
+        env, map_size = self.env, self.map_size
+        handles = env.get_handles()[1:]
+        food_handle = env.get_handles()[0]
+        center_x, center_y = map_size // 2, map_size // 2
+
+        def get_food_range(inputs, center, length, gap):
+            for x in range(center[0] - length // 2, center[0] + length // 2 + 1, gap):
+                for y in range(center[1] - length // 2, center[1] + length // 2 + 1, gap):
+                    inputs.append([x, y])
+
+        def add_square_food(inputs, center, length, gap):
+            temp_len = length
+            while temp_len >= 0:
+                for x in range(center[0] - temp_len // 2, center[0] + temp_len // 2 + 1, gap):
+                    inputs.append([x, center[1] - temp_len // 2])
+                    inputs.append([x, center[1] + temp_len // 2])
+                for y in range(center[1] - temp_len // 2, center[1] + temp_len // 2 + 1, gap):
+                    inputs.append([center[0] - temp_len // 2, y])
+                    inputs.append([center[0] + temp_len // 2, y])
+
+                temp_len -= 4
+
+        def add_square_agent(inputs, food_inputs, length, gap):
+            for x in range(center_x - length // 2, center_x + length // 2 + 1, gap):
+                if food_inputs.count([x, center_y - length // 2]) == 0:
+                    inputs.append([x, center_y - length // 2])
+                if food_inputs.count([x, center_y + length // 2]) == 0:
+                    inputs.append([x, center_y + length // 2])
+            for y in range(center_y - length // 2, center_y + length // 2 + 1, gap):
+                if food_inputs.count([center_x - length // 2, y]) == 0:
+                    inputs.append([center_x - length // 2, y])
+                if food_inputs.count([center_x + length // 2, y]) == 0:
+                    inputs.append([center_x + length // 2, y])
+
+        # foods
+        food_pos, food_range = [], []
+        pointer = self.pointer % 4
+        self.pointer += 1
+        food_length = int(map_size/6)
+        if pointer == 0:
+            add_square_food(food_pos, [int(map_size/4), int(map_size/4)], food_length, 1)
+            get_food_range(food_range, [int(map_size/4), int(map_size/4)], food_length, 1)
+        elif pointer == 1:
+            add_square_food(food_pos, [3 * int(map_size/4), int(map_size/4)], food_length, 1)
+            get_food_range(food_range, [3 * int(map_size/4), int(map_size/4)], food_length, 1)
+        elif pointer == 2:
+            add_square_food(food_pos, [int(map_size/4), 3 * int(map_size/4)], food_length, 1)
+            get_food_range(food_range, [int(map_size/4), 3 * int(map_size/4)], food_length, 1)
+        else:
+            add_square_food(food_pos, [3 * int(map_size/4), 3 * int(map_size/4)], food_length, 1)
+            get_food_range(food_range, [3 * int(map_size/4), 3 * int(map_size/4)], food_length, 1)
+
+        # agents
+        agent_pos = []
+        add_square_agent(agent_pos, food_range, int(map_size/2), 3)
+
+        env.add_agents(handles[0], method='custom', pos=agent_pos)
+
+        env.add_agents(food_handle, method="custom", pos=food_pos)
+
+    def generate_edge_map(self):
+        env, map_size = self.env, self.map_size
+        handles = env.get_handles()[1:]
+        food_handle = env.get_handles()[0]
+        center_x, center_y = map_size // 2, map_size // 2
+
+        # agents
+        pos = []
+        for i in range(3):
+            for j in range(3):
+                if np.abs(i - 1) + np.abs(j - 1) < 2:
+                    pos.append([center_x + i - 1, center_y + j - 1])
+
+        pos.append([map_size // 2, map_size - 3])
+        pos.append([map_size // 2, 2])
+        pos.append([map_size - 3, map_size // 2])
+        pos.append([2, map_size // 2])
+
+        env.add_agents(handles[0], method='custom', pos=pos)
+
+        # foods
+        pos = []
+        pointer = self.pointer % 4
+        self.pointer += 1
+        if pointer == 0:
+            for i in range(map_size):
+                pos.append([1, i])
+        elif pointer == 1:
+            for i in range(map_size):
+                pos.append([i, 1])
+        elif pointer == 2:
+            for i in range(map_size):
+                pos.append([map_size - 2, i])
+        else:
+            for i in range(map_size):
+                pos.append([i, map_size - 2])
 
         env.add_agents(food_handle, method="custom", pos=pos)

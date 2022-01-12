@@ -41,7 +41,7 @@ def dgn(env_fn, args, logger_kwargs=None):
 
     n_actions = args.n_actions
 
-    buff = ReplayBuffer(args.capacity, agents=agents, obs_shape=obs_shape)
+    buff = ReplayBuffer(args.capacity, agents=agents, args=args)
 
     model = DGN(n_agent, obs_shape, args.hidden_dim, n_actions).cuda()
     model_tar = DGN(n_agent, obs_shape, args.hidden_dim, n_actions).cuda()
@@ -131,8 +131,8 @@ def train(buff, args, model, model_tar, n_agent, optimizer):
 
     loss = (q_values[x, y, z] - expected_q[x, y, z]).pow(2).mean()
 
-    q_values = q_values * np.expand_dims(is_alives, -1)
-    expected_q = expected_q * np.expand_dims(next_is_alives, -1)
+    q_values = q_values * next_is_alives.unsqueeze(-1)
+    expected_q = expected_q * next_is_alives.unsqueeze(-1)
     delta = q_values[x, y, z] - expected_q[x, y, z]
 
     optimizer.zero_grad()

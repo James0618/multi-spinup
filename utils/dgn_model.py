@@ -6,10 +6,12 @@ import torch.nn.functional as F
 
 
 class ReplayBuffer(object):
-    def __init__(self, buffer_size, agents, obs_shape):
+    def __init__(self, buffer_size, agents, args):
         self.buffer_size = buffer_size
         self.agents = agents
-        self.obs_shape = obs_shape
+        self.args = args
+        self.obs_shape = args.vae_observation_dim
+        self.n_actions = args.n_actions
         self.obs, self.next_obs, self.action, self.reward, self.done = None, None, None, None, None
         self.matrix, self.next_matrix, self.is_alive, self.next_is_alive = None, None, None, None
         self.index, self.num_experiences = 0, 0
@@ -28,13 +30,12 @@ class ReplayBuffer(object):
         next_obs_tensor = torch.zeros(len(self.agents), self.obs_shape)
         reward_tensor = torch.zeros(len(self.agents))
         action_tensor = torch.zeros(len(self.agents)).type(torch.long)
-        for key in obs.keys():
-            obs_tensor[self.agents.index(key)] = obs[key]
 
-        for key in new_obs.keys():
-            next_obs_tensor[self.agents.index(key)] = new_obs[key]
+        for key in reward.keys():
+            obs_tensor[self.agents.index(key)] = obs[key]
             reward_tensor[self.agents.index(key)] = reward[key]
             action_tensor[self.agents.index(key)] = int(action[key])
+            next_obs_tensor[self.agents.index(key)] = new_obs[key]
 
         self.obs[self.index] = obs_tensor
         self.action[self.index] = action_tensor

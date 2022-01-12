@@ -6,12 +6,14 @@ import numpy as np
 
 
 class ReplayBuffer(object):
-    def __init__(self, buffer_size, agents, obs_shape):
+    def __init__(self, buffer_size, agents, args):
         self.buffer_size = buffer_size
         self.agents = agents
-        self.obs_shape = obs_shape
-        self.obs, self.next_obs, self.action, self.reward, self.done = None, None, None, None, None
-        self.matrix, self.next_matrix, self.is_alive, self.next_is_alive = None, None, None, None
+        self.n_agents = len(agents)
+        self.args = args
+        self.obs_shape = args.vae_observation_shape
+        self.obs, self.next_obs, self.action, self.reward = None, None, None, None
+        self.prob, self.next_prob, self.mask = None, None, None
         self.index, self.num_experiences = 0, 0
         self.reset()
 
@@ -23,28 +25,29 @@ class ReplayBuffer(object):
 
         return batch
 
-    def add(self, obs, action, reward, new_obs, matrix, next_matrix, done, is_alive, next_is_alive):
-        obs_tensor = torch.zeros(len(self.agents), self.obs_shape)
-        next_obs_tensor = torch.zeros(len(self.agents), self.obs_shape)
-        reward_tensor = torch.zeros(len(self.agents))
-        action_tensor = torch.zeros(len(self.agents)).type(torch.long)
-        for key in obs.keys():
+    def add(self, obs, action, prob, reward, new_obs, next_prob):
+        obs_tensor = torch.zeros(self.n_agents, self.obs_shape)
+        next_obs_tensor = torch.zeros(self.n_agents, self.obs_shape)
+        reward_tensor = torch.zeros(self.n_agents)
+        action_tensor = torch.zeros(self.n_agents).type(torch.long)
+        prob_tensor = torch.from_numpy(prob)
+        next_prob_tensor = torch.from_numpy(next_prob)
+        mask_tensor = torch.zeros(self.n_agents)
+        
+        for key in reward.keys():
             obs_tensor[self.agents.index(key)] = obs[key]
-
-        for key in new_obs.keys():
-            next_obs_tensor[self.agents.index(key)] = new_obs[key]
-            reward_tensor[self.agents.index(key)] = reward[key]
             action_tensor[self.agents.index(key)] = int(action[key])
+            reward_tensor[self.agents.index(key)] = reward[key]
+            next_obs_tensor[self.agents.index(key)] = new_obs[key]
+            mask_tensor[self.agents.index(key)] = 1
 
         self.obs[self.index] = obs_tensor
         self.action[self.index] = action_tensor
         self.reward[self.index] = reward_tensor
         self.next_obs[self.index] = next_obs_tensor
-        self.matrix[self.index] = torch.tensor(matrix).type(torch.long)
-        self.next_matrix[self.index] = torch.tensor(next_matrix).type(torch.long)
-        self.done[self.index] = done
-        self.is_alive[self.index] = torch.tensor(is_alive).type(torch.long)
-        self.next_is_alive[self.index] = torch.tensor(next_is_alive).type(torch.long)
+        self.prob[self.index] = prob_tensor
+        self.next_prob[self.index] = next_prob_tensor
+        self.mask[self.index] = mask_tensor
 
         if self.num_experiences < self.buffer_size:
             self.num_experiences += 1
@@ -54,15 +57,13 @@ class ReplayBuffer(object):
             self.index = 0
 
     def reset(self):
-        self.obs = torch.zeros(self.buffer_size, len(self.agents), self.obs_shape)
-        self.next_obs = torch.zeros(self.buffer_size, len(self.agents), self.obs_shape)
-        self.reward = torch.zeros(self.buffer_size, len(self.agents))
-        self.action = torch.zeros(self.buffer_size, len(self.agents)).type(torch.long)
-        self.matrix = torch.zeros(self.buffer_size, len(self.agents), len(self.agents)).type(torch.long)
-        self.next_matrix = torch.zeros(self.buffer_size, len(self.agents), len(self.agents)).type(torch.long)
-        self.done = torch.zeros(self.buffer_size).type(torch.long)
-        self.is_alive = torch.zeros(self.buffer_size, len(self.agents)).type(torch.long)
-        self.next_is_alive = torch.zeros(self.buffer_size, len(self.agents)).type(torch.long)
+        self.obs = torch.zeros(self.buffer_size, self.n_agents, self.obs_shape)
+        self.next_obs = torch.zeros(self.buffer_size, self.n_agents, self.obs_shape)
+        self.reward = torch.zeros(self.buffer_size, self.n_agents)
+        self.action = torch.zeros(self.buffer_size, self.n_agents).type(torch.long)
+        self.prob = torch.zeros(self.buffer_size, self.n_agents, self.args.n_actions)
+        self.next_prob = torch.zeros(self.buffer_size, self.n_agents, self.args.n_actions)
+        self.mask = torch.zeros(self.buffer_size, self.n_agents).type(torch.long)
 
 
 class MFQ(nn.Module):
@@ -95,9 +96,9 @@ class MFQ(nn.Module):
 
 
 class Policy:
-    def __init__(self, args, obs_shape, model, agents):
+    def __init__(self, args, model, agents):
         self.args = args
-        self.obs_shape = obs_shape
+        self.obs_shape = args.obs_shape
         self.model = model
         self.agents = agents
 

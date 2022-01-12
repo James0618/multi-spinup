@@ -5,8 +5,8 @@ capacity: 10000
 update_interval: 200
 
 vae_model: true
-max_cycle: 80
-map_size: 24
+max_cycle: 100
+map_size: 48
 view_range: 6
 step_reward: -0.05
 dead_penalty: -0.5

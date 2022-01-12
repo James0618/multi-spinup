@@ -85,9 +85,9 @@ class _parallel_env(magent_parallel_env, EzPickle):
         super().__init__(env, handles[1:], names, map_size, max_cycles, reward_range, minimap_mode, extra_features)
 
     def generate_map(self):
-        self.generate_random_map()
+        # self.generate_random_map()
         # self.generate_edge_map()
-        # self.generate_normal_map()
+        self.generate_normal_map()
 
     def generate_normal_map(self):
         env, map_size = self.env, self.map_size

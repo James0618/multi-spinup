@@ -13,19 +13,19 @@ class ReplayBuffer(object):
         self.args = args
         self.obs_shape = args.vae_observation_shape
         self.obs, self.next_obs, self.action, self.reward = None, None, None, None
-        self.prob, self.next_prob, self.mask = None, None, None
+        self.prob, self.next_prob, self.mask, self.terminated = None, None, None, None
         self.index, self.num_experiences = 0, 0
         self.reset()
 
     def get_batch(self, batch_size):
         sample_index = random.sample(np.arange(self.num_experiences).tolist(), batch_size)
-        batch = [self.obs[sample_index], self.action[sample_index], self.reward[sample_index],
-                 self.next_obs[sample_index], self.matrix[sample_index], self.next_matrix[sample_index],
-                 self.done[sample_index], self.is_alive[sample_index], self.next_is_alive[sample_index]]
+        batch = [self.obs[sample_index], self.next_obs[sample_index], self.action[sample_index],
+                 self.reward[sample_index], self.prob[sample_index], self.next_prob[sample_index],
+                 self.mask[sample_index], self.terminated[sample_index]]
 
         return batch
 
-    def add(self, obs, action, prob, reward, new_obs, next_prob):
+    def add(self, obs, action, prob, reward, new_obs, next_prob, done):
         obs_tensor = torch.zeros(self.n_agents, self.obs_shape)
         next_obs_tensor = torch.zeros(self.n_agents, self.obs_shape)
         reward_tensor = torch.zeros(self.n_agents)
@@ -33,12 +33,14 @@ class ReplayBuffer(object):
         prob_tensor = torch.from_numpy(prob)
         next_prob_tensor = torch.from_numpy(next_prob)
         mask_tensor = torch.zeros(self.n_agents)
+        terminated_tensor = torch.zeros(self.n_agents)
         
         for key in reward.keys():
             obs_tensor[self.agents.index(key)] = obs[key]
             action_tensor[self.agents.index(key)] = int(action[key])
             reward_tensor[self.agents.index(key)] = reward[key]
             next_obs_tensor[self.agents.index(key)] = new_obs[key]
+            terminated_tensor[self.agents.index(key)] = done[key]
             mask_tensor[self.agents.index(key)] = 1
 
         self.obs[self.index] = obs_tensor
@@ -64,6 +66,7 @@ class ReplayBuffer(object):
         self.prob = torch.zeros(self.buffer_size, self.n_agents, self.args.n_actions)
         self.next_prob = torch.zeros(self.buffer_size, self.n_agents, self.args.n_actions)
         self.mask = torch.zeros(self.buffer_size, self.n_agents).type(torch.long)
+        self.terminated = torch.zeros(self.buffer_size, self.n_agents).type(torch.long)
 
 
 class MFQ(nn.Module):

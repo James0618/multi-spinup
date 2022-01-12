@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import torch
-import torch.nn.functional
+import torch.nn.functional as F
 import torch.optim as optim
 from utils.mfq_model import ReplayBuffer, MFQ, Policy
 from envs.gather import GatherEnv
@@ -58,15 +58,10 @@ def mfq(env_fn, args, logger_kwargs=None):
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
     logger.setup_pytorch_saver(model)
 
-    i_episode, update_time, epsilon = 0, 0, 0.9
+    i_episode, update_time = 0, 0
     origin_time = time.time()
 
     while i_episode < args.n_episode:
-        if i_episode > args.random_episode:
-            epsilon -= 0.0004
-            if epsilon < 0.05:
-                epsilon = 0.05
-
         i_episode += 1
 
         steps, ep_ret = 0, 0
@@ -81,8 +76,9 @@ def mfq(env_fn, args, logger_kwargs=None):
             next_obs, rewards, done, next_positions = env.step(actions)
             terminal = is_terminated(terminated=done)
 
-            buff.add(obs, actions, prob, reward, new_obs, next_prob)
+            buff.add(obs, actions, prob, rewards, next_obs, next_prob, done)
             obs = next_obs
+            prob = next_prob
 
             if args.global_reward:
                 ep_ret += sum([rewards[agent] for agent in rewards.keys()]) / len(rewards)
@@ -95,7 +91,7 @@ def mfq(env_fn, args, logger_kwargs=None):
 
         if i_episode >= args.random_episode:
             for e in range(args.n_epoch):
-                train(buff, args, model, model_tar, n_agent, optimizer)
+                train(buff, args, model, model_tar, optimizer)
                 update_time += 1
                 if update_time == args.update_interval:
                     update_time = 0
@@ -111,31 +107,34 @@ def mfq(env_fn, args, logger_kwargs=None):
             logger.save_state({'env': env}, None)
 
 
-def train(buff, args, model, model_tar, n_agent, optimizer):
+def train(buff, args, model, model_tar, optimizer):
     batch = buff.get_batch(args.batch_size)
-    observations = batch[0]
-    action = batch[1].cuda()
-    reward = batch[2].cuda()
-    next_observations = batch[3]
-    matrix = batch[4]
-    next_matrix = batch[5]
+
+    observations = batch[0].cuda()
+    next_observations = batch[1].cuda()
+    action = batch[2].cuda()
+    reward = batch[3].cuda()
+    prob = batch[4].cuda()
+    next_prob = batch[5].cuda()
     mask = batch[6].cuda()
+    terminated = batch[7].cuda()
 
-    q_values = model(observations.cuda(), matrix.cuda())
-    target_q_values = model_tar(next_observations.cuda(), next_matrix.cuda()).max(dim=2)[0].detach()
-    expected_q = q_values.detach().clone()
+    q_values = model(observations, prob)
+    action_onehot = F.one_hot(action, args.n_actions)
+    q_values = (q_values * action_onehot).sum(-1)
 
-    mesh_grid = torch.meshgrid(torch.arange(args.batch_size), torch.arange(n_agent))
-    x, y, z = mesh_grid[0].reshape(-1).tolist(), mesh_grid[1].reshape(-1).tolist(), action.reshape(-1).tolist()
-    expected_q[x, y, z] = reward[x, y] + (1 - mask[x, y]) * args.gamma * target_q_values[x, y]
+    target_q_values = model_tar(next_observations, next_prob).max(dim=-1)[0].detach()
+    targets = reward + args.gamma * (1 - terminated) * target_q_values
 
-    loss = (q_values[x, y, z] - expected_q[x, y, z]).pow(2).mean()
+    delta = (targets - q_values) ** 2
+
+    loss = (delta * mask).sum() / mask.sum()
 
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
-    return float(loss)
+    return float(loss.detach().cpu())
 
 
 def cal_time(t):

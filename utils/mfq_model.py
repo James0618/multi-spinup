@@ -85,6 +85,7 @@ class ReplayBuffer(object):
         self.prob[self.index] = prob_tensor
         self.next_prob[self.index] = next_prob_tensor
         self.mask[self.index] = mask_tensor
+        self.terminated[self.index] = terminated_tensor
 
         if self.num_experiences < self.buffer_size:
             self.num_experiences += 1

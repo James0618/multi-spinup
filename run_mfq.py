@@ -24,12 +24,13 @@ if __name__ == '__main__':
     test = False
 
     device_id = 0
-    experiment_id = 4
+    experiment_id = 1
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(device_id)
 
     t = time.localtime(time.time())
     experiment = 'gather-mfq-{}-{}/{}'.format(t.tm_mon, t.tm_mday, experiment_id)
     config_name = 'mfq'
+
     if test:
         test_policy(experiment=experiment, config_name=config_name)
     else:

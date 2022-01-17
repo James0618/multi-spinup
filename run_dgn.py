@@ -1,8 +1,9 @@
+import os
 import time
 from algos.dgn import dgn
 from configs.load_config import load_config, load_default_config
 from envs.gather import GatherEnv
-from utils.test_gather_policy import test_policy
+from utils.dgn_model import test_policy
 
 
 def run(exp_name='ppo', config_name='gather'):
@@ -21,8 +22,13 @@ def run(exp_name='ppo', config_name='gather'):
 
 if __name__ == '__main__':
     test = False
+
+    device_id = 0
+    experiment_id = 1
+    os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(device_id)
+
     t = time.localtime(time.time())
-    experiment = 'gather-dgn-{}-{}'.format(t.tm_mon, t.tm_mday)
+    experiment = 'gather-dgn-{}-{}/{}'.format(t.tm_mon, t.tm_mday, experiment_id)
     config_name = 'dgn'
 
     if test:

@@ -1,8 +1,9 @@
+import os
 import time
 from algos.mfq import mfq
 from configs.load_config import load_config, load_default_config
 from envs.gather import GatherEnv
-from utils.test_gather_policy import test_policy
+from utils.mfq_model import test_policy
 
 
 def run(exp_name='mfq', config_name='mfq'):
@@ -21,10 +22,14 @@ def run(exp_name='mfq', config_name='mfq'):
 
 if __name__ == '__main__':
     test = False
-    t = time.localtime(time.time())
-    experiment = 'gather-mfq-{}-{}'.format(t.tm_mon, t.tm_mday)
-    config_name = 'mfq'
 
+    device_id = 0
+    experiment_id = 4
+    os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(device_id)
+
+    t = time.localtime(time.time())
+    experiment = 'gather-mfq-{}-{}/{}'.format(t.tm_mon, t.tm_mday, experiment_id)
+    config_name = 'mfq'
     if test:
         test_policy(experiment=experiment, config_name=config_name)
     else:

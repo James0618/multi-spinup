@@ -16,7 +16,7 @@ class Preprocessor:
         images = {}
         for key, value in observations.items():
             if not self.args.vae_model:
-                obs[key] = value[:, :, [0, 1, 2, 4, 5, 7, 8]].transpose(2, 0, 1)
+                obs[key] = torch.tensor(value[:, :, [0, 1, 2, 4, 5, 7, 8]].transpose(2, 0, 1), dtype=torch.float)
             else:
                 images[key] = value[:, :, [0, 1, 2, 4, 5, 7, 8]].transpose(2, 0, 1)
 

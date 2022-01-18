@@ -1,0 +1,2 @@
+Episode	TestRet	TestSteps	AverageEpRet	StdEpRet	MaxEpRet	MinEpRet	EpLen	Time
+50	-96.92500180639327	80.0	-96.27699	6.2189164	-84.65	-114.65	80.0	1 min 34 sec

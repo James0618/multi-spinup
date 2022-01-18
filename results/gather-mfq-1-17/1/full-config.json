@@ -23,7 +23,7 @@
     "batch_size": 512,
     "n_episode": 40000,
     "n_epoch": 20,
-    "capacity": 20000,
+    "capacity": 200000,
     "tau": 0.005,
     "action_net": true,
     "mfq": true,

@@ -34,7 +34,7 @@ def test(model, env, args, test_num=10):
     i_episode, update_time, epsilon = 0, 0, 0.9
     test_ret, test_steps = 0, 0
 
-    while i_episode < args.n_episode:
+    while i_episode < test_num:
         i_episode += 1
         steps, ep_ret = 0, 0
         obs = env.reset()
@@ -173,7 +173,7 @@ def train(buff, args, model, model_tar, n_agent, optimizer):
     targets = reward + args.gamma * (1 - terminated) * target_q_values
 
     delta = ((targets - q_values) ** 2) * mask
-    loss = delta.mean()
+    loss = delta.sum() / mask.sum()
 
     optimizer.zero_grad()
     loss.backward()

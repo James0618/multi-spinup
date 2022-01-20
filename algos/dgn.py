@@ -41,7 +41,7 @@ def test(model, env, args, test_num=10):
         adj = env.graph_builder.adjacency_matrix
         while True:
             steps += 1
-            actions = policy.choose_action(observations=obs, adj_matrix=adj, epsilon=epsilon)
+            actions = policy.choose_action(observations=obs, adj_matrix=adj, epsilon=0.0)
 
             next_obs, rewards, done, next_positions = env.step(actions)
             next_adj = env.graph_builder.adjacency_matrix

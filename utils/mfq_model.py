@@ -268,8 +268,8 @@ def test_policy(experiment, config_name, test_num=10):
             actions = policy.choose_action(observations=obs, mean_actions=prob, epsilon=0.0)
             next_prob = get_prob(actions=actions, n_actions=run_args.n_actions)
 
-            next_obs, rewards, done, next_positions = env.step(actions)
             env.render()
+            next_obs, rewards, done, next_positions = env.step(actions)
             terminal = is_terminated(terminated=done)
 
             obs = next_obs

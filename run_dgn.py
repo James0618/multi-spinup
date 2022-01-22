@@ -21,7 +21,7 @@ def run(exp_name='ppo', config_name='gather'):
 
 
 if __name__ == '__main__':
-    test = True
+    test = False
 
     device_id = 0
     experiment_id = 1

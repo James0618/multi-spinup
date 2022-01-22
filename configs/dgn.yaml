@@ -6,8 +6,8 @@ update_interval: 200
 tau: 0.005
 
 vae_model: true
-max_cycle: 100
-map_size: 48
+max_cycle: 80
+map_size: 24
 view_range: 6
 step_reward: -0.05
 dead_penalty: -0.5

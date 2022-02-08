@@ -21,10 +21,10 @@ default_reward_args = dict(step_reward=-0.01, attack_penalty=-0.1, dead_penalty=
 
 
 def parallel_env(map_size=map_size_default, max_cycles=max_cycles_default, minimap_mode=minimap_mode_default,
-                 view_range=view_range_default, extra_features=False, **reward_args):
+                 view_range=view_range_default, extra_features=False, if_random=False, **reward_args):
     env_reward_args = dict(**default_reward_args)
     env_reward_args.update(reward_args)
-    return _parallel_env(map_size, minimap_mode, view_range, env_reward_args, max_cycles, extra_features)
+    return _parallel_env(map_size, minimap_mode, view_range, env_reward_args, max_cycles, extra_features, if_random)
 
 
 def raw_env(max_cycles=max_cycles_default, minimap_mode=minimap_mode_default, extra_features=False, **reward_args):
@@ -74,7 +74,7 @@ def load_config(map_size, minimap_mode, view_range, step_reward, attack_penalty,
 class _parallel_env(magent_parallel_env, EzPickle):
     metadata = {'render.modes': ['human', 'rgb_array'], 'name': "gather_v3"}
 
-    def __init__(self, map_size, minimap_mode, view_range, reward_args, max_cycles, extra_features):
+    def __init__(self, map_size, minimap_mode, view_range, reward_args, max_cycles, extra_features, if_random):
         self.pointer = 0
         EzPickle.__init__(self, map_size, minimap_mode, reward_args, max_cycles, extra_features)
         env = magent.GridWorld(load_config(map_size, minimap_mode, view_range, **reward_args))
@@ -82,12 +82,16 @@ class _parallel_env(magent_parallel_env, EzPickle):
         reward_vals = np.array([5] + list(reward_args.values()))
         reward_range = [np.minimum(reward_vals, 0).sum(), np.maximum(reward_vals, 0).sum()]
         names = ["omnivore"]
+        self.if_random = if_random
         super().__init__(env, handles[1:], names, map_size, max_cycles, reward_range, minimap_mode, extra_features)
 
     def generate_map(self):
-        self.generate_random_map()
+        if self.if_random:
+            self.generate_random_map()
+        else:
+            self.generate_normal_map()
+
         # self.generate_edge_map()
-        # self.generate_normal_map()
 
     def generate_normal_map(self):
         env, map_size = self.env, self.map_size

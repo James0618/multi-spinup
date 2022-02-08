@@ -183,7 +183,7 @@ def is_terminated(terminated):
     return bool(np.array(results).sum())
 
 
-def test_policy(experiment, config_name, test_num=10):
+def test_policy(experiment, config_name, test_num=10, render=True):
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default='/home/drl/PycharmProjects/multi-spinup/results/{}'.format(
         experiment))
@@ -217,7 +217,8 @@ def test_policy(experiment, config_name, test_num=10):
             next_obs, rewards, done, next_positions = env.step(actions)
             next_adj = env.graph_builder.adjacency_matrix
 
-            env.render()
+            if render:
+                env.render()
 
             terminal = is_terminated(terminated=done)
 

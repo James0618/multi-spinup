@@ -236,7 +236,7 @@ def get_prob(actions, n_actions):
     return prob / n_agents
 
 
-def test_policy(experiment, config_name, test_num=10):
+def test_policy(experiment, config_name, test_num=10, render=True):
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default='/home/drl/PycharmProjects/multi-spinup/results/{}'.format(
         experiment))
@@ -268,7 +268,9 @@ def test_policy(experiment, config_name, test_num=10):
             actions = policy.choose_action(observations=obs, mean_actions=prob, epsilon=0.0)
             next_prob = get_prob(actions=actions, n_actions=run_args.n_actions)
 
-            env.render()
+            if render:
+                env.render()
+
             next_obs, rewards, done, next_positions = env.step(actions)
             terminal = is_terminated(terminated=done)
 

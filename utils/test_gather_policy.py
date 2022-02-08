@@ -26,7 +26,7 @@ def load_model(args):
     return actor_critic
 
 
-def test_policy(experiment, config_name):
+def test_policy(experiment, config_name, render=True):
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default='/home/drl/PycharmProjects/multi-spinup/results/{}'.format(
         experiment))
@@ -53,7 +53,9 @@ def test_policy(experiment, config_name):
         while not terminal:
             actions, values, log_probs = ally_policy.choose_action(obs)
 
-            env.render()
+            if render:
+                env.render()
+
             time.sleep(0.05)
             next_obs, rewards, done, _ = env.step(actions)
             ep_ret += sum([rewards[agent] for agent in rewards.keys()])

@@ -11,7 +11,7 @@ class GatherEnv:
                                               dead_penalty=args.dead_penalty, attack_penalty=args.attack_penalty,
                                               attack_food_reward=args.attack_food_reward,
                                               max_cycles=args.max_cycle, extra_features=False,
-                                              view_range=args.view_range)
+                                              view_range=args.view_range, if_random=args.random)
         self.preprocessor = Preprocessor(args=args)
         self.possible_agents = self.env.possible_agents
 

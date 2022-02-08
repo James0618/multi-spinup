@@ -24,7 +24,7 @@ if __name__ == '__main__':
     test = False
 
     device_id = 0
-    experiment_id = 1
+    experiment_id = 0
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(device_id)
 
     t = time.localtime(time.time())

@@ -1,12 +1,12 @@
 {
     "gamma": 0.995,
-    "seed": 0,
+    "seed": 5,
     "cpu": 8,
-    "steps_per_epoch": 80000,
+    "steps_per_epoch": 120000,
     "epochs": 2000,
     "hidden_dim": 128,
-    "max_cycle": 80,
-    "map_size": 24,
+    "max_cycle": 100,
+    "map_size": 96,
     "step_reward": -0.05,
     "dead_penalty": -0.5,
     "attack_penalty": -0.1,
@@ -23,10 +23,10 @@
     "with_state": true,
     "zero_state": false,
     "gcn": true,
+    "random": false,
     "attack_food_reward": 1.0,
     "vae_model": true,
     "global_reward": false,
-    "random": true,
     "vae_observation_dim": 96,
     "hid_shape": 160,
     "latent_state_shape": 128,
@@ -35,6 +35,6 @@
         "torch.Size([35])"
     ],
     "observation_shape": "torch.Size([7, 13, 13])",
-    "state_shape": "torch.Size([3, 24, 24])",
+    "state_shape": "torch.Size([3, 96, 96])",
     "n_actions": 33
 }

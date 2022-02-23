@@ -46,6 +46,7 @@ def test_policy(experiment, config_name, render=True):
 
     # Main loop: collect experience in env and update/log each epoch
     obs = env.reset()
+    test_ret = 0
     for episode in range(args.test_episode):
         terminal = False
         ep_ret, ep_len = 0, 0
@@ -55,8 +56,8 @@ def test_policy(experiment, config_name, render=True):
 
             if render:
                 env.render()
+                time.sleep(0.05)
 
-            time.sleep(0.05)
             next_obs, rewards, done, _ = env.step(actions)
             ep_ret += sum([rewards[agent] for agent in rewards.keys()])
             ep_len += 1
@@ -68,3 +69,7 @@ def test_policy(experiment, config_name, render=True):
 
         print('Test episode {}: return {:.2f}'.format(episode, ep_ret))
         env.close()
+
+        test_ret += ep_ret
+
+    return test_ret / 10

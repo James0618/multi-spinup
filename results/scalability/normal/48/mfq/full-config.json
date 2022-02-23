@@ -6,7 +6,7 @@
     "epochs": 500,
     "hidden_dim": 128,
     "max_cycle": 100,
-    "map_size": 48,
+    "map_size": 96,
     "step_reward": -0.05,
     "dead_penalty": -0.5,
     "attack_penalty": -0.1,
@@ -21,7 +21,7 @@
     "pooling_ratio": 0.4,
     "nhid": 128,
     "batch_size": 512,
-    "n_episode": 40000,
+    "n_episode": 15000,
     "n_epoch": 20,
     "capacity": 20000,
     "tau": 0.005,
@@ -44,6 +44,6 @@
         "torch.Size([35])"
     ],
     "observation_shape": "torch.Size([7, 13, 13])",
-    "state_shape": "torch.Size([3, 48, 48])",
+    "state_shape": "torch.Size([3, 96, 96])",
     "n_actions": 33
 }

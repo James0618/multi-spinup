@@ -6,9 +6,9 @@ from utils.dgn_model import test_policy as dgn_test_policy
 
 def test_method(method, model_size, model_scenario, test_size, test_scenario):
     config = 'scalability/{}/{}-{}'.format(test_scenario, method, test_size)
-    experiment = 'results/scalability/{}/{}/{}'.format(model_scenario, model_size, method)
+    experiment = 'scalability/{}/{}/{}'.format(model_scenario, model_size, method)
 
-    if method == 'ippo' or 'dsin':
+    if method == 'ippo' or method == 'dsin':
         result = gather_test_policy(experiment=experiment, config_name=config, render=False)
     elif method == 'mfq':
         result = mfq_test_policy(experiment=experiment, config_name=config, render=False)
@@ -23,13 +23,11 @@ def test_method(method, model_size, model_scenario, test_size, test_scenario):
 def test_scalability():
     scenarios = ['random', 'normal']
     sizes = [24, 48, 96]
-    methods = ['ippo', 'dsin', 'mfq', 'dgn']
+    methods = ['mfq']
 
     results = {
-        'ippo': np.zeros((6, 6)),
         'dsin': np.zeros((6, 6)),
-        'mfq': np.zeros((6, 6)),
-        'dgn': np.zeros((6, 6)),
+        'mfq': np.zeros((6, 6))
     }
 
     for method in methods:
@@ -50,3 +48,4 @@ if __name__ == '__main__':
     scalability = test_scalability()
     for key in scalability.keys():
         print(key + ': ', scalability[key])
+        np.save('results/scalability/origin-{}.npy'.format(key), scalability[key])

@@ -1,16 +1,16 @@
 batch_size: 64
-n_episode: 15000
+n_episode: 40000
 n_epoch: 5
 capacity: 20000
 update_interval: 200
 tau: 0.005
 random: true
 
-seed: 5
+seed: 10
 
 vae_model: true
-max_cycle: 100
-map_size: 96
+max_cycle: 80
+map_size: 24
 view_range: 6
 step_reward: -0.05
 dead_penalty: -0.5

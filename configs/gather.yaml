@@ -1,18 +1,18 @@
 # Algorithm Settings
 cpu: 8
-steps_per_epoch: 120000
+steps_per_epoch: 80000
 epochs: 2000
 with_state: true
-zero_state: false
+zero_state: true
 gcn: true
 hidden_dim: 128
 random: true
 
-seed: 5
+seed: 10
 
 # Environment Settings
-max_cycle: 100
-map_size: 96
+max_cycle: 80
+map_size: 24
 step_reward: -0.05
 dead_penalty: -0.5
 attack_penalty: -0.1

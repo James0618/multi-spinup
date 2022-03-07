@@ -1,14 +1,15 @@
 # Algorithm Settings
-cpu: 8
+cpu: 1
 steps_per_epoch: 80000
 epochs: 2000
 with_state: true
-zero_state: true
+zero_state: false
 gcn: true
+global_net: true
 hidden_dim: 128
 random: true
 
-seed: 10
+seed: 00
 
 # Environment Settings
 max_cycle: 80

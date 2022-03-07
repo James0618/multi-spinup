@@ -1,6 +1,6 @@
 {
     "gamma": 0.995,
-    "seed": 0,
+    "seed": 10,
     "cpu": 8,
     "steps_per_epoch": 80000,
     "epochs": 2000,
@@ -23,6 +23,7 @@
     "with_state": true,
     "zero_state": false,
     "gcn": true,
+    "random": true,
     "attack_food_reward": 1.0,
     "vae_model": true,
     "global_reward": false,

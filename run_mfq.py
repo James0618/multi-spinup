@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
     t = time.localtime(time.time())
     experiment = 'gather-mfq-{}-{}/{}'.format(t.tm_mon, t.tm_mday, experiment_id)
+    # experiment = 'final results/1/random scenario/48/mfq'
     config_name = 'mfq'
 
     if test:

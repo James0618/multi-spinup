@@ -25,7 +25,11 @@ class GatherEnv:
         self.observation_space = self.env.observation_spaces[self.possible_agents[0]]
         self.state_space = self.env.state_space
         self.controlled_group = 'omnivore'
-        self.state_net = torch.load('envs/vae_model/state-vae.pth').cpu()
+        if args.global_net:
+            self.state_net = torch.load('envs/vae_model/global-vae.pth').cpu()
+        else:
+            self.state_net = torch.load('envs/vae_model/state-vae.pth').cpu()
+
         self.state = None
         self.hidden_states = None
         self.with_state = args.with_state

@@ -1,6 +1,6 @@
 {
     "gamma": 0.995,
-    "seed": 5,
+    "seed": 10,
     "cpu": 1,
     "steps_per_epoch": 32000,
     "epochs": 500,
@@ -21,7 +21,7 @@
     "pooling_ratio": 0.4,
     "nhid": 128,
     "batch_size": 512,
-    "n_episode": 15000,
+    "n_episode": 40000,
     "n_epoch": 20,
     "capacity": 20000,
     "tau": 0.005,

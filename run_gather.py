@@ -33,8 +33,8 @@ def run(exp_name='ppo', config_name='gather'):
 if __name__ == '__main__':
     test = False
 
-    device_id = 1
-    experiment_id = 3
+    device_id = 3
+    experiment_id = 0
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(device_id)
 
     t = time.localtime(time.time())

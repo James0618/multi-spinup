@@ -1,6 +1,6 @@
 # Algorithm Settings
-cpu: 8
-steps_per_epoch: 120000
+cpu: 1
+steps_per_epoch: 8000
 epochs: 2000
 with_state: true
 zero_state: false

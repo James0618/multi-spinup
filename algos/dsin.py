@@ -250,11 +250,9 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
     #     terminated_buf = torch.zeros(20000)
 
     # Main loop: collect experience in env and update/log each epoch
-    buf_ptr = 0
     total_episode_num = 0
     for epoch in range(epochs):
         steps_in_buffer = 0
-        if_terminated = 0
         episode_num = 0
         while steps_in_buffer < local_steps_per_epoch:
             actions, values, log_probs = ally_policy.choose_action(obs)
@@ -279,18 +277,8 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
             terminal = is_terminated(terminated=done)
 
             # save and log
-            # if proc_id() == 0:
-            #     if if_terminated < 1:
-            #         # state_buf[buf_ptr + epoch * 40] = torch.from_numpy(state).type(torch.float)
-            #         matrix = env.graph_builder.distance_matrix
-            #         adj_buf[buf_ptr] = torch.from_numpy(matrix).type(torch.float)
-            #         for agent in rewards.keys():
-            #             obs_buf[buf_ptr, agents.index(agent)] = next_obs[agent]
-            #             pos_buf[buf_ptr, agents.index(agent)] = torch.from_numpy(next_positions[agent])
-            #             is_alive_buf[buf_ptr, agents.index(agent)] = 1
-            #
-            #         terminated_buf[buf_ptr] = 1 if terminal else 0
-            #         buf_ptr += 1
+            buf.store_extra(matrix=env.graph_builder.distance_matrix, obs=next_obs, pos=next_positions,
+                            agents=rewards.keys(), terminal=terminal)
 
             epoch_ended = steps_in_buffer >= local_steps_per_epoch
 
@@ -313,7 +301,6 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
                     episode_num += 1
 
                 obs, ep_ret, ep_len = env.reset(), 0, 0
-                if_terminated += 1
 
         logger.store(EpNum=total_episode_num + mpi_sum(episode_num))
         total_episode_num += mpi_sum(episode_num)
@@ -341,11 +328,3 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
         logger.log_tabular('StopIter', average_only=True)
         logger.log_tabular('Time', time.time() - start_time)
         logger.dump_tabular()
-
-        # if proc_id() == 0:
-        #     # torch.save(state_buf, 'results/state_buf.pth')
-        #     torch.save(adj_buf, 'results/adj_buf.pth')
-        #     torch.save(obs_buf, 'results/obs_buf.pth')
-        #     torch.save(is_alive_buf, 'results/is_alive_buf.pth')
-        #     torch.save(pos_buf, 'results/pos_buf.pth')
-        #     torch.save(terminated_buf, 'results/terminated_buf.pth')

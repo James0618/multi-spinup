@@ -17,6 +17,10 @@ class PPOBuffer:
         self.obs_buf, self.act_buf, self.adv_buf, self.rew_buf = None, None, None, None
         self.ret_buf, self.val_buf, self.logp_buf = None, None, None
 
+        self.extra_obs_buf, self.adj_buf, self.pos_buf, self.is_alive_buf = None, None, None, None
+        self.terminated_buf = None
+        self.dsin_ptr = 0
+
         self.obs_temp_buf, self.act_temp_buf, self.adv_temp_buf, self.rew_temp_buf = None, None, None, None
         self.ret_temp_buf, self.val_temp_buf, self.logp_temp_buf = None, None, None
 
@@ -36,8 +40,14 @@ class PPOBuffer:
         self.val_buf = torch.zeros(self.buffer_size)
         self.logp_buf = torch.zeros(self.buffer_size)
 
+        self.adj_buf = torch.zeros(self.buffer_size, self.max_agents, self.max_agents)
+        self.pos_buf = torch.zeros(self.buffer_size, self.max_agents, 2)
+        self.is_alive_buf = torch.zeros(self.buffer_size, self.max_agents)
+        self.terminated_buf = torch.zeros(self.buffer_size)
+
         self.steps_in_buffer = 0
         self.buffer_ptr = 0
+        self.dsin_ptr = 0
 
     def reset_temp_buffer(self):
         self.obs_temp_buf = torch.zeros(self.max_cycle, self.max_agents, *self.obs_shape)
@@ -67,6 +77,19 @@ class PPOBuffer:
                     print(rew)
 
         self.steps_in_buffer += len(list(rew.keys()))
+
+    def store_extra(self, matrix, obs, pos, agents, terminal):
+        self.adj_buf[self.dsin_ptr] = torch.from_numpy(matrix).type(torch.float)
+
+        for agent in agents:
+            self.extra_obs_buf[self.dsin_ptr, self.possible_agents.index(agent)] = obs[agent]
+            self.pos_buf[self.dsin_ptr, self.possible_agents.index(agent)] = torch.from_numpy(pos[agent])
+            self.is_alive_buf[self.dsin_ptr, self.possible_agents.index(agent)] = 1
+
+        self.terminated_buf[self.dsin_ptr] = 1 if terminal else 0
+        self.pos_buf[self.dsin_ptr] = pos
+
+        self.dsin_ptr += 1
 
     def finish_path(self, last_val):
         """
@@ -133,3 +156,8 @@ class PPOBuffer:
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
                     adv=self.adv_buf, logp=self.logp_buf)
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
+
+    def get_extra(self):
+        data = dict(matrix=self.adj_buf, obs=self.extra_obs_buf, pos=self.pos_buf,
+                    is_alive=self.is_alive_buf, terminated=self.terminated_buf)
+        return {k: torch.as_tensor(v, dtype=torch.float) for k, v in data.items()}

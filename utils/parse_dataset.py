@@ -9,17 +9,45 @@ import matplotlib.pyplot as plt
 DEVICE = 'cpu'
 
 
-def parse_dataset(min_neigh=None):
-    path = 'data/full-dataset/processed/'
-    if min_neigh is not None:
-        matrix = torch.load(path + 'min_matrix.pth')
-    else:
-        matrix = torch.from_numpy(torch.load(path + 'matrix.pth')).type(torch.long)
+def process_dataset(data):
+    terminated_buf = data['terminated']
+    last_terminal = terminated_buf.nonzero().max()
 
-    is_alive_buf = torch.load(path + 'is_alive.pth')
-    obs_buf = torch.load(path + 'obs.pth')
-    pos_buf = torch.load(path + 'pos.pth')
-    terminated_buf = torch.load(path + 'terminated.pth')
+    matrix_buf = data['matrix'][: (last_terminal + 1)]
+    is_alive_buf = data['is_alive'][: (last_terminal + 1)]
+    obs_buf = data['obs'][: (last_terminal + 1)]
+    pos_buf = data['pos'][: (last_terminal + 1)]
+
+    n_agents = matrix_buf.shape[-1]
+
+    temp = torch.arange(n_agents).tolist()
+    temp_matrix = copy.deepcopy(matrix_buf)
+    all_min_matrix = np.zeros((matrix_buf.shape[0], n_agents, n_agents))
+
+    for i in range(matrix_buf.shape[0]):
+        for j in range(4):
+            min_index = temp_matrix[i, j].argmin(-1).tolist()
+            invalid_temp = (temp_matrix[i, j, temp, min_index] > 100).nonzero()[0].tolist()
+            invalid_index = np.array(min_index)[invalid_temp].tolist()
+            all_min_matrix[i, temp, min_index] = 1
+            all_min_matrix[i, min_index, temp] = 1
+            all_min_matrix[i, invalid_temp, invalid_index] = 0
+            all_min_matrix[i, invalid_index, invalid_temp] = 0
+
+    data = dict(matrix=all_min_matrix, obs=obs_buf, pos=pos_buf,
+                is_alive=is_alive_buf, terminated=terminated_buf)
+
+    return {k: torch.as_tensor(v, dtype=torch.float) for k, v in data.items()}
+
+
+def parse_dataset(data):
+    data = process_dataset(data)
+
+    matrix = data['matrix'].type(torch.long)
+    is_alive_buf = data['is_alive']
+    obs_buf = data['obs']
+    pos_buf = data['pos']
+    terminated_buf = data['terminated']
 
     terminals = terminated_buf.nonzero().squeeze().tolist()
     matrix_dataset, is_alive_dataset, obs_dataset, pos_dataset = [], [], [], []

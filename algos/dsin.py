@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.optim import Adam
 import time
-from utils import core, policy, buffer
+from utils import core, policy, buffer, parse_dataset
 from envs.gather import GatherEnv
 from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
@@ -277,7 +277,7 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
             terminal = is_terminated(terminated=done)
 
             # save and log
-            buf.store_extra(matrix=env.graph_builder.distance_matrix, obs=next_obs, pos=next_positions,
+            buf.store_extra(matrix=env.graph_builder.all_direction_matrix, obs=next_obs, pos=next_positions,
                             agents=rewards.keys(), terminal=terminal)
 
             epoch_ended = steps_in_buffer >= local_steps_per_epoch
@@ -310,6 +310,7 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
 
         # Perform PPO update!
         update()
+        parse_dataset.parse_dataset(data=buf.get_extra())
         buf.reset()
 
         # Log info about epoch

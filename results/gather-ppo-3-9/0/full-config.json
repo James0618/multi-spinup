@@ -2,11 +2,11 @@
     "gamma": 0.995,
     "seed": 0,
     "cpu": 1,
-    "steps_per_epoch": 8000,
+    "steps_per_epoch": 10000,
     "epochs": 2000,
     "hidden_dim": 128,
-    "max_cycle": 100,
-    "map_size": 96,
+    "max_cycle": 80,
+    "map_size": 24,
     "step_reward": -0.05,
     "dead_penalty": -0.5,
     "attack_penalty": -0.1,
@@ -36,6 +36,6 @@
         "torch.Size([35])"
     ],
     "observation_shape": "torch.Size([7, 13, 13])",
-    "state_shape": "torch.Size([3, 96, 96])",
+    "state_shape": "torch.Size([3, 24, 24])",
     "n_actions": 33
 }

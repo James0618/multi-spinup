@@ -40,7 +40,8 @@ class PPOBuffer:
         self.val_buf = torch.zeros(self.buffer_size)
         self.logp_buf = torch.zeros(self.buffer_size)
 
-        self.adj_buf = torch.zeros(self.buffer_size, self.max_agents, self.max_agents)
+        self.adj_buf = torch.zeros(self.buffer_size, 4, self.max_agents, self.max_agents)
+        self.extra_obs_buf = torch.zeros(self.buffer_size, self.max_agents, *self.obs_shape)
         self.pos_buf = torch.zeros(self.buffer_size, self.max_agents, 2)
         self.is_alive_buf = torch.zeros(self.buffer_size, self.max_agents)
         self.terminated_buf = torch.zeros(self.buffer_size)
@@ -87,7 +88,6 @@ class PPOBuffer:
             self.is_alive_buf[self.dsin_ptr, self.possible_agents.index(agent)] = 1
 
         self.terminated_buf[self.dsin_ptr] = 1 if terminal else 0
-        self.pos_buf[self.dsin_ptr] = pos
 
         self.dsin_ptr += 1
 

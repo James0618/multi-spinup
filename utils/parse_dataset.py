@@ -5,10 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# DEVICE = 'cuda:0'
-DEVICE = 'cpu'
-
-
 def process_dataset(data):
     terminated_buf = data['terminated']
     last_terminal = terminated_buf.nonzero().max()
@@ -92,7 +88,7 @@ def get_neigh(matrix, data):
     n_agents, data_shape = matrix.shape[-1], data.shape[-1]
     result = []
 
-    n_neigh, ptr = matrix.sum(-1).cpu(), 0
+    n_neigh, ptr = matrix.sum(-1), 0
     neighs = matrix.nonzero().transpose(0, 1).tolist()[1]
     for i in range(n_agents):
         index = neighs[ptr: ptr + n_neigh[i]]
@@ -102,9 +98,9 @@ def get_neigh(matrix, data):
         result.append(all_data)
         ptr += n_neigh[i]
 
-    x = torch.cat(result).to(DEVICE)
-    batch = torch.zeros(x.shape[0]).type(torch.long).to(DEVICE)
-    edge_index = torch.zeros(2, sum(n_neigh) * 2).type(torch.long).to(DEVICE)
+    x = torch.cat(result)
+    batch = torch.zeros(x.shape[0]).type(torch.long)
+    edge_index = torch.zeros(2, sum(n_neigh) * 2).type(torch.long)
 
     batch_ptr, edge_ptr = 0, 0
     for i in range(n_agents):
@@ -121,8 +117,8 @@ def get_neigh(matrix, data):
 
 
 def get_graph(matrix, data):
-    x = data.to(DEVICE)
-    edge = matrix.nonzero().transpose(0, 1).to(DEVICE)
+    x = data
+    edge = matrix.nonzero().transpose(0, 1)
 
     return x, edge
 

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.optim import Adam
 import time
-from utils import core, policy, buffer, parse_dataset
+from utils import core, policy, buffer, parse_dataset, graph_model, train_graph
 from envs.gather import GatherEnv
 from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
@@ -143,8 +143,9 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
 
     n_actions = args.n_actions
 
-    # Create actor-critic module
+    # Create actor-critic module and communication model
     ac = actor_critic(args=args)
+    vae_model = graph_model.VAE(obs_shape=96, hid_shape=196, h_dim=512, z_dim=128)
 
     # Sync params across processes
     sync_params(ac)
@@ -195,6 +196,7 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
     # Set up optimizers for policy and value function
     pi_optimizer = Adam(ac.pi.parameters(), lr=pi_lr)
     vf_optimizer = Adam(ac.v.parameters(), lr=vf_lr)
+    vae_optimizer = torch.optim.Adamax(vae_model.parameters(), lr=0.001)
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
@@ -310,7 +312,8 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
 
         # Perform PPO update!
         update()
-        parse_dataset.parse_dataset(data=buf.get_extra())
+        dataset = parse_dataset.parse_dataset(data=buf.get_extra())
+        train_graph.train_vae(dataset, vae_model, vae_optimizer, max_epochs=5)
         buf.reset()
 
         # Log info about epoch

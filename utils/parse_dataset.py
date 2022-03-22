@@ -46,6 +46,9 @@ def parse_dataset(data):
     terminated_buf = data['terminated']
 
     terminals = terminated_buf.nonzero().squeeze().tolist()
+    if type(terminals) == int:
+        terminals = [terminals]
+
     matrix_dataset, is_alive_dataset, obs_dataset, pos_dataset = [], [], [], []
     last_terminal = 0
 

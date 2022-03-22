@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from envs import magent_gather
 from utils.preprocessor import Preprocessor, GraphBuilder
+from utils import graph_model
 
 
 class GatherEnv:
@@ -26,13 +27,19 @@ class GatherEnv:
         self.state_space = self.env.state_space
         self.controlled_group = 'omnivore'
         if args.global_net:
-            self.state_net = torch.load('envs/vae_model/global-vae.pth').cpu()
+            if args.online:
+                self.state_net = graph_model.VAE(obs_shape=96, hid_shape=160, h_dim=512, z_dim=128)
+            else:
+                self.state_net = torch.load('envs/vae_model/global-vae.pth').cpu()
         else:
             self.state_net = torch.load('envs/vae_model/state-vae.pth').cpu()
 
         self.state = None
         self.hidden_states = None
         self.with_state = args.with_state
+
+    def set_state_net(self, model):
+        self.state_net.load_state_dict(model.state_dict())
 
     def reset(self):
         observations = self.env.reset()
@@ -47,6 +54,8 @@ class GatherEnv:
 
             if self.args.zero_state:
                 observations = self.preprocessor.add_zero_state(env=self, obs=observations)
+            elif self.args.mean_state:
+                observations = self.preprocessor.add_mean_state(env=self, obs=observations)
             else:
                 observations, self.hidden_states = self.preprocessor.add_state(
                     env=self, obs=observations, hid_states=self.hidden_states,
@@ -79,6 +88,8 @@ class GatherEnv:
         if self.args.with_state:
             if self.args.zero_state:
                 observations = self.preprocessor.add_zero_state(env=self, obs=observations)
+            elif self.args.mean_state:
+                observations = self.preprocessor.add_mean_state(env=self, obs=observations)
             else:
                 observations, self.hidden_states = self.preprocessor.add_state(
                     env=self, obs=observations, hid_states=self.hidden_states,

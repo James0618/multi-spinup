@@ -1,17 +1,17 @@
 import numpy as np
 import torch
-from torch.optim import Adam
+from torch.optim import Adam, Adamax
 import time
 from utils import core, policy, buffer, parse_dataset, graph_model, train_graph
 from envs.gather import GatherEnv
 from spinup.utils.logx import EpochLogger
-from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
+from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, sync_params_cuda, mpi_avg_grads
 from spinup.utils.mpi_tools import mpi_avg, mpi_sum, proc_id, mpi_statistics_scalar, num_procs
 
 
 def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, clip_ratio=0.2, pi_lr=4e-4, vf_lr=8e-4,
-         train_pi_iters=50, train_v_iters=50, lam=0.97, max_ep_len=1000, actor_critic=core.CNNActorCritic,
-         target_kl=0.01, logger_kwargs=dict(), save_freq=10):
+         lam=0.97, max_ep_len=1000, actor_critic=core.CNNActorCritic, target_kl=0.01, logger_kwargs=dict(),
+         save_freq=10):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -122,6 +122,7 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
 
     # Set up logger and save configuration
     logger = EpochLogger(**logger_kwargs)
+    vae_logger = EpochLogger(**logger_kwargs)
     temp = locals()
     inputs = {key: temp[key] for key in temp if type(temp[key]) is float or type(temp[key]) is int}
     logger.save_config(inputs)
@@ -135,9 +136,9 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
     env: GatherEnv = env_fn()
     if args.vae_model:
         if args.with_state:
-            obs_shape = torch.Size([args.vae_observation_dim + args.latent_state_shape])
+            obs_shape = torch.Size([2 * args.vae_observation_dim])
         else:
-            obs_shape = torch.Size([args.vae_observation_dim])
+            obs_shape = torch.Size([args.vae_observation_dim + args.latent_state_shape])
     else:
         obs_shape = args.observation_shape
 
@@ -145,10 +146,12 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
 
     # Create actor-critic module and communication model
     ac = actor_critic(args=args)
-    vae_model = graph_model.VAE(obs_shape=96, hid_shape=196, h_dim=512, z_dim=128)
+    vae_model = graph_model.VAE(obs_shape=96, hid_shape=160, h_dim=512, z_dim=128, device='cuda:0')
 
     # Sync params across processes
     sync_params(ac)
+    sync_params(vae_model)
+    vae_model.cuda()
 
     # Count variables
     var_counts = tuple(core.count_vars(module) for module in [ac.pi, ac.v])
@@ -160,7 +163,8 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
     groups = ['omnivore']
     agents = env.possible_agents
     buf = buffer.PPOBuffer(obs_shape=obs_shape, n_actions=n_actions, max_agents=len(agents), max_cycle=args.max_cycle,
-                           buffer_size=local_steps_per_epoch, agents=agents)
+                           buffer_size=local_steps_per_epoch, agents=agents,
+                           vae_observation_dim=args.vae_observation_dim)
 
     def is_terminated(terminated):
         results = []
@@ -196,12 +200,13 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
     # Set up optimizers for policy and value function
     pi_optimizer = Adam(ac.pi.parameters(), lr=pi_lr)
     vf_optimizer = Adam(ac.v.parameters(), lr=vf_lr)
-    vae_optimizer = torch.optim.Adamax(vae_model.parameters(), lr=0.001)
+    vae_optimizer = Adamax(vae_model.parameters(), lr=0.001)
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
+    vae_logger.setup_pytorch_saver(vae_model)
 
-    def update():
+    def update(train_pi_iters=50, train_v_iters=50):
         data = buf.get()
 
         pi_l_old, pi_info_old = compute_loss_pi(data)
@@ -243,19 +248,16 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
     state = env.env.state().transpose(2, 0, 1)
 
     ally_policy = policy.Policy(args=args, actor_critic=ac)
-    # if proc_id() == 0:
-    #     # state_buf = torch.zeros(20000, 5, 20, 20)
-    #     adj_buf = torch.zeros(20000, len(agents), len(agents))
-    #     obs_buf = torch.zeros(20000, len(agents), 96)
-    #     pos_buf = torch.zeros(20000, len(agents), 2)
-    #     is_alive_buf = torch.zeros(20000, len(agents))
-    #     terminated_buf = torch.zeros(20000)
 
     # Main loop: collect experience in env and update/log each epoch
     total_episode_num = 0
+
     for epoch in range(epochs):
         steps_in_buffer = 0
         episode_num = 0
+        if args.online:
+            env.set_state_net(model=vae_model)
+
         while steps_in_buffer < local_steps_per_epoch:
             actions, values, log_probs = ally_policy.choose_action(obs)
 
@@ -309,11 +311,17 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
             logger.save_state({'env': env}, None)
+            vae_logger.save_state({'env': env}, 0)
+
+        if args.online:
+            dataset = parse_dataset.parse_dataset(data=buf.get_extra())
+            train_iter = train_graph.train_vae(dataset, vae_model, vae_optimizer, threshold=0.065)
+            logger.store(TrainIter=train_iter)
+        else:
+            logger.store(TrainIter=0)
 
         # Perform PPO update!
         update()
-        dataset = parse_dataset.parse_dataset(data=buf.get_extra())
-        train_graph.train_vae(dataset, vae_model, vae_optimizer, max_epochs=5)
         buf.reset()
 
         # Log info about epoch
@@ -321,7 +329,7 @@ def dsin(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cl
         logger.log_tabular('EpRet', with_min_and_max=True)
         logger.log_tabular('EpLen', average_only=True)
         logger.log_tabular('EpNum', average_only=True)
-        logger.log_tabular('TotalEnvInteracts', (epoch + 1) * steps_per_epoch)
+        logger.log_tabular('TrainIter', average_only=True)
         logger.log_tabular('LossPi', average_only=True)
         logger.log_tabular('LossV', average_only=True)
         logger.log_tabular('DeltaLossPi', average_only=True)

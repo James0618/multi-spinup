@@ -61,6 +61,20 @@ class Preprocessor:
 
         return obs_with_zero_state
 
+    def add_mean_state(self, env, obs):
+        obs_with_mean_state = {}
+        mean_state = torch.zeros(self.args.vae_observation_dim)
+        for key, value in obs.items():
+            mean_state += value
+
+        mean_state /= len(obs)
+
+        env.state = mean_state
+        for key, value in obs.items():
+            obs_with_mean_state[key] = torch.cat((value, mean_state))
+
+        return obs_with_mean_state
+
     def _vae_observation(self, images):
         image_tensor = torch.zeros(len(images), *self.args.observation_shape)
         for i, key in enumerate(images.keys()):

@@ -135,7 +135,10 @@ def ppo(env_fn, args, seed=0, steps_per_epoch=32000, epochs=500, gamma=0.99, cli
     env: GatherEnv = env_fn()
     if args.vae_model:
         if args.with_state:
-            obs_shape = torch.Size([args.vae_observation_dim + args.latent_state_shape])
+            if args.mean_state:
+                obs_shape = torch.Size([2 * args.vae_observation_dim])
+            else:
+                obs_shape = torch.Size([args.vae_observation_dim + args.latent_state_shape])
         else:
             obs_shape = torch.Size([args.vae_observation_dim])
     else:

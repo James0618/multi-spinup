@@ -1,14 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
-
-
-def get_graph(matrix, data):
-    x = data
-    edge = matrix.nonzero().transpose(0, 1)
-
-    return x, edge
+from torch_geometric.nn import GCNConv, GATConv
 
 
 class UnFlatten(nn.Module):
@@ -21,11 +14,12 @@ class UnFlatten(nn.Module):
 
 
 class NeighNet(torch.nn.Module):
-    def __init__(self, data_shape, h_dim, output_shape):
+    def __init__(self, data_shape, h_dim, output_shape, device='cpu'):
         super(NeighNet, self).__init__()
         self.num_features = data_shape
         self.nhid = h_dim
         self.output_shape = output_shape
+        self.device = device
         self.pooling_ratio = 0.2
 
         self.conv = GCNConv(self.num_features, self.nhid)
@@ -36,8 +30,14 @@ class NeighNet(torch.nn.Module):
             nn.Linear(self.nhid, self.output_shape),
         )
 
+    def get_graph(self, matrix, data):
+        x = data.to(self.device)
+        edge = matrix.nonzero().transpose(0, 1).to(self.device)
+
+        return x, edge
+
     def forward(self, data, matrix):
-        x, edge_index = get_graph(matrix, data)
+        x, edge_index = self.get_graph(matrix, data)
         x = F.relu(self.conv(x, edge_index))
         x = self.fc(x)
 
@@ -45,9 +45,11 @@ class NeighNet(torch.nn.Module):
 
 
 class DecoderPos(nn.Module):
-    def __init__(self, observation_shape, h_dim=256, z_dim=64):
+    def __init__(self, observation_shape, h_dim=256, z_dim=64, device='cpu'):
         super(DecoderPos, self).__init__()
         self.observation_shape, self.h_dim, self.z_dim = observation_shape, h_dim, z_dim
+        self.device = device
+
         self.decode_net = nn.Sequential(
             nn.Linear(z_dim + 2, h_dim),
             nn.ReLU(),
@@ -56,7 +58,7 @@ class DecoderPos(nn.Module):
         )
 
     def forward(self, latent_state, positions):
-        inputs = torch.cat((latent_state, positions), dim=-1)
+        inputs = torch.cat((latent_state, positions.to(self.device)), dim=-1)
         reconstructed_observations = self.decode_net(inputs)
 
         return reconstructed_observations
@@ -86,11 +88,13 @@ class Decoder(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, obs_shape, hid_shape, h_dim):
+    def __init__(self, obs_shape, hid_shape, h_dim, device='cpu'):
         super(Encoder, self).__init__()
+        self.device = device
+
         self.transition_net = nn.GRUCell(obs_shape, hid_shape)
-        self.obs_net = NeighNet(obs_shape, h_dim, obs_shape)
-        self.hid_net = NeighNet(hid_shape, h_dim, hid_shape)
+        self.obs_net = NeighNet(obs_shape, h_dim, obs_shape, device)
+        self.hid_net = NeighNet(hid_shape, h_dim, hid_shape, device)
         self.encoder = nn.Linear(hid_shape, h_dim)
 
     def forward(self, obs, hidden_states, matrix):
@@ -104,23 +108,24 @@ class Encoder(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self, obs_shape=96, hid_shape=128, h_dim=256, z_dim=64):
+    def __init__(self, obs_shape=96, hid_shape=128, h_dim=256, z_dim=64, device='cpu'):
         super(VAE, self).__init__()
         self.observation_shape, self.hid_shape, self.h_dim, self.z_dim = obs_shape, hid_shape, h_dim, z_dim
+        self.device = device
 
-        self.encoder = Encoder(obs_shape=obs_shape, hid_shape=hid_shape, h_dim=h_dim)
+        self.encoder = Encoder(obs_shape=obs_shape, hid_shape=hid_shape, h_dim=h_dim, device=self.device)
 
         # used for encoder
         self.fc_mu = nn.Linear(h_dim, z_dim)
         self.fc_log_var = nn.Linear(h_dim, z_dim)
 
         # self.decoder = Decoder(observation_shape=observation_shape, h_dim=h_dim, z_dim=z_dim)
-        self.decoder = DecoderPos(observation_shape=obs_shape, h_dim=h_dim, z_dim=z_dim)
+        self.decoder = DecoderPos(observation_shape=obs_shape, h_dim=h_dim, z_dim=z_dim, device=self.device)
 
     def reparameterize(self, mu, log_var):
         std = log_var.mul(0.5).exp_()
         # return torch.normal(mu, std)
-        esp = torch.randn(*mu.size())
+        esp = torch.randn(*mu.size()).to(self.device)
         z = mu + std * esp
 
         return z

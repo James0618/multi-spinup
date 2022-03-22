@@ -1,8 +1,8 @@
 {
     "gamma": 0.995,
     "seed": 0,
-    "cpu": 1,
-    "steps_per_epoch": 10000,
+    "cpu": 8,
+    "steps_per_epoch": 80000,
     "epochs": 2000,
     "hidden_dim": 128,
     "max_cycle": 80,

@@ -212,9 +212,14 @@ class VAEActor(Actor):
     def __init__(self, args):
         super(VAEActor, self).__init__()
         self.args = args
+        if args.mean_state:
+            input_shape = 2 * args.vae_observation_dim
+        else:
+            input_shape = args.vae_observation_dim + args.latent_state_shape
+
         if self.args.with_state:
             self.logits_net = nn.Sequential(
-                nn.Linear(args.vae_observation_dim + args.latent_state_shape, args.hidden_dim),
+                nn.Linear(input_shape, args.hidden_dim),
                 nn.ReLU(),
                 nn.Linear(args.hidden_dim, args.n_actions),
             )
@@ -238,9 +243,14 @@ class VAECritic(nn.Module):
         super(VAECritic, self).__init__()
         self.args = args
         # self.feature_net, self.cnn_output_size = cnn(args)
+        if args.mean_state:
+            input_shape = 2 * args.vae_observation_dim
+        else:
+            input_shape = args.vae_observation_dim + args.latent_state_shape
+
         if self.args.with_state:
             self.v_net = nn.Sequential(
-                nn.Linear(args.vae_observation_dim + args.latent_state_shape, args.hidden_dim),
+                nn.Linear(input_shape, args.hidden_dim),
                 nn.ReLU(),
                 nn.Linear(args.hidden_dim, 1),
             )

@@ -11,8 +11,14 @@ class PPOBuffer:
     for calculating the advantages of state-action pairs.
     """
 
-    def __init__(self, obs_shape, n_actions, max_agents, max_cycle, buffer_size, agents, gamma=0.99, lam=0.95):
+    def __init__(self, obs_shape, n_actions, max_agents, max_cycle, buffer_size, agents, vae_observation_dim=0,
+                 gamma=0.99, lam=0.95):
         self.possible_agents = agents
+        if vae_observation_dim == 0:
+            self.vae_shape = obs_shape
+        else:
+            self.vae_shape = torch.Size([vae_observation_dim])
+
         self.obs_shape, self.n_actions, self.max_agents, self.max_cycle = obs_shape, n_actions, max_agents, max_cycle
         self.obs_buf, self.act_buf, self.adv_buf, self.rew_buf = None, None, None, None
         self.ret_buf, self.val_buf, self.logp_buf = None, None, None
@@ -41,7 +47,7 @@ class PPOBuffer:
         self.logp_buf = torch.zeros(self.buffer_size)
 
         self.adj_buf = torch.zeros(self.buffer_size, 4, self.max_agents, self.max_agents)
-        self.extra_obs_buf = torch.zeros(self.buffer_size, self.max_agents, *self.obs_shape)
+        self.extra_obs_buf = torch.zeros(self.buffer_size, self.max_agents, *self.vae_shape)
         self.pos_buf = torch.zeros(self.buffer_size, self.max_agents, 2)
         self.is_alive_buf = torch.zeros(self.buffer_size, self.max_agents)
         self.terminated_buf = torch.zeros(self.buffer_size)
@@ -83,7 +89,7 @@ class PPOBuffer:
         self.adj_buf[self.dsin_ptr] = torch.from_numpy(matrix).type(torch.float)
 
         for agent in agents:
-            self.extra_obs_buf[self.dsin_ptr, self.possible_agents.index(agent)] = obs[agent]
+            self.extra_obs_buf[self.dsin_ptr, self.possible_agents.index(agent)] = obs[agent][:self.vae_shape[0]]
             self.pos_buf[self.dsin_ptr, self.possible_agents.index(agent)] = torch.from_numpy(pos[agent])
             self.is_alive_buf[self.dsin_ptr, self.possible_agents.index(agent)] = 1
 

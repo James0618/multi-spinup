@@ -1,0 +1,14 @@
+{
+    "clip_ratio":	0.2,
+    "epochs":	2000,
+    "exp_name":	"gather-ppo-3-11/0",
+    "gamma":	0.995,
+    "lam":	0.97,
+    "max_ep_len":	1000,
+    "pi_lr":	0.0004,
+    "save_freq":	10,
+    "seed":	0,
+    "steps_per_epoch":	120000,
+    "target_kl":	0.01,
+    "vf_lr":	0.0008
+}

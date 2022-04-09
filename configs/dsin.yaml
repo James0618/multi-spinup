@@ -4,14 +4,14 @@ steps_per_epoch: 80000
 epochs: 2000
 with_state: true
 zero_state: false
-mean_state: false
+mean_state: true
 gcn: true
 global_net: true
 hidden_dim: 128
 random: false
 online: false
 
-seed: 0
+seed: 5
 
 # Environment Settings
 max_cycle: 100

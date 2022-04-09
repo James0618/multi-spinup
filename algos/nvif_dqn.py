@@ -66,7 +66,7 @@ def test(model, env, args, test_num=10):
     return test_ret / test_num, test_steps / test_num
 
 
-def mfq(env_fn, args, logger_kwargs=None):
+def nvif_dqn(env_fn, args, logger_kwargs=None):
     if logger_kwargs is None:
         logger_kwargs = {}
 
@@ -78,14 +78,6 @@ def mfq(env_fn, args, logger_kwargs=None):
     env: GatherEnv = env_fn()
     agents = env.possible_agents
     n_agent = len(agents)
-
-    if args.vae_model:
-        if args.with_state:
-            obs_shape = args.vae_observation_dim + args.latent_state_shape
-        else:
-            obs_shape = args.vae_observation_dim
-    else:
-        obs_shape = args.observation_shape
 
     n_actions = args.n_actions
 

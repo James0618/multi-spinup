@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from utils.mfq_model import ReplayBuffer, MFQ, Policy
+from utils.nvif_dqn_model import ReplayBuffer, NVIFDQN, Policy
 from envs.gather import GatherEnv
 from spinup.utils.logx import EpochLogger
 
@@ -39,18 +39,15 @@ def test(model, env, args, test_num=10):
 
         steps, ep_ret = 0, 0
         obs = env.reset()
-        prob = np.zeros(args.n_actions)
 
         while True:
             steps += 1
-            actions = policy.choose_action(observations=obs, mean_actions=prob, epsilon=0.0)
-            next_prob = get_prob(actions=actions, n_actions=args.n_actions)
+            actions = policy.choose_action(observations=obs, epsilon=0.0)
 
             next_obs, rewards, done, next_positions = env.step(actions)
             terminal = is_terminated(terminated=done)
 
             obs = next_obs
-            prob = next_prob
 
             if args.global_reward:
                 ep_ret += sum([rewards[agent] for agent in rewards.keys()]) / len(rewards)
@@ -83,8 +80,8 @@ def nvif_dqn(env_fn, args, logger_kwargs=None):
 
     buff = ReplayBuffer(args.capacity, agents=agents, args=args)
 
-    model = MFQ(args=args).cuda()
-    model_tar = MFQ(args=args).cuda()
+    model = NVIFDQN(args=args).cuda()
+    model_tar = NVIFDQN(args=args).cuda()
     policy = Policy(args=args, model=model, agents=agents)
 
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
@@ -107,15 +104,13 @@ def nvif_dqn(env_fn, args, logger_kwargs=None):
                     epsilon = 0.05
 
             steps += 1
-            actions = policy.choose_action(observations=obs, mean_actions=prob, epsilon=epsilon)
-            next_prob = get_prob(actions=actions, n_actions=args.n_actions)
+            actions = policy.choose_action(observations=obs, epsilon=epsilon)
 
             next_obs, rewards, done, next_positions = env.step(actions)
             terminal = is_terminated(terminated=done)
 
-            buff.add(obs, actions, prob, rewards, next_obs, next_prob, done)
+            buff.add(obs, actions, rewards, next_obs, done)
             obs = next_obs
-            prob = next_prob
 
             if args.global_reward:
                 ep_ret += sum([rewards[agent] for agent in rewards.keys()]) / len(rewards)
@@ -151,15 +146,13 @@ def train(buff, args, model, model_tar, optimizer):
     next_observations = batch['next_obs'].cuda()
     action = batch['action'].cuda()
     reward = batch['reward'].cuda()
-    prob = batch['prob'].cuda()
-    next_prob = batch['next_prob'].cuda()
     terminated = batch['terminated'].cuda()
 
-    q_values = model(observations, prob)
+    q_values = model(observations)
     action_onehot = F.one_hot(action, args.n_actions)
     q_values = (q_values * action_onehot).sum(-1)
 
-    target_q_values = model_tar(next_observations, next_prob).max(dim=-1)[0].detach()
+    target_q_values = model_tar(next_observations).max(dim=-1)[0].detach()
     targets = reward + args.gamma * (1 - terminated) * target_q_values
 
     delta = (targets - q_values) ** 2

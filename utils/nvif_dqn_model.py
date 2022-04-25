@@ -21,14 +21,13 @@ class ReplayBuffer(object):
             self.obs_shape = args.vae_observation_dim
 
         self.obs, self.next_obs, self.action, self.reward = None, None, None, None
-        self.prob, self.next_prob, self.mask, self.terminated = None, None, None, None
+        self.mask, self.terminated = None, None
         self.index, self.num_experiences = 0, 0
         self.reset()
 
     def get_batch(self, batch_size):
         # sample_index = random.sample(np.arange(self.num_experiences).tolist(), batch_size)
-        batch_dict = {'obs': [], 'next_obs': [], 'action': [], 'reward': [], 'prob': [], 'next_prob': [],
-                      'terminated': []}
+        batch_dict = {'obs': [], 'next_obs': [], 'action': [], 'reward': [], 'terminated': []}
 
         batch_num = 0
         while True:
@@ -39,8 +38,6 @@ class ReplayBuffer(object):
                 batch_dict['next_obs'].append(self.next_obs[i, j])
                 batch_dict['action'].append(self.action[i, j])
                 batch_dict['reward'].append(self.reward[i, j])
-                batch_dict['prob'].append(self.prob[i, j])
-                batch_dict['next_prob'].append(self.next_prob[i, j])
                 batch_dict['terminated'].append(self.terminated[i, j])
                 batch_num += 1
 
@@ -55,7 +52,7 @@ class ReplayBuffer(object):
 
         return batch
 
-    def add(self, obs, action, prob, reward, new_obs, next_prob, done):
+    def add(self, obs, action, reward, new_obs, done):
         if not self.args.vae_model:
             obs_tensor = torch.zeros(self.n_agents, *self.args.input_shape[0])
             next_obs_tensor = torch.zeros(self.n_agents, *self.args.input_shape[0])
@@ -65,8 +62,6 @@ class ReplayBuffer(object):
 
         reward_tensor = torch.zeros(self.n_agents)
         action_tensor = torch.zeros(self.n_agents).type(torch.long)
-        prob_tensor = torch.from_numpy(prob)
-        next_prob_tensor = torch.from_numpy(next_prob)
         mask_tensor = torch.zeros(self.n_agents)
         terminated_tensor = torch.zeros(self.n_agents)
         
@@ -82,8 +77,6 @@ class ReplayBuffer(object):
         self.action[self.index] = action_tensor
         self.reward[self.index] = reward_tensor
         self.next_obs[self.index] = next_obs_tensor
-        self.prob[self.index] = prob_tensor
-        self.next_prob[self.index] = next_prob_tensor
         self.mask[self.index] = mask_tensor
         self.terminated[self.index] = terminated_tensor
 
@@ -104,8 +97,6 @@ class ReplayBuffer(object):
 
         self.reward = torch.zeros(self.buffer_size, self.n_agents)
         self.action = torch.zeros(self.buffer_size, self.n_agents).type(torch.long)
-        self.prob = torch.zeros(self.buffer_size, self.n_agents, self.args.n_actions)
-        self.next_prob = torch.zeros(self.buffer_size, self.n_agents, self.args.n_actions)
         self.mask = torch.zeros(self.buffer_size, self.n_agents).type(torch.long)
         self.terminated = torch.zeros(self.buffer_size, self.n_agents).type(torch.long)
 
@@ -115,6 +106,7 @@ class NVIFDQN(nn.Module):
         super(NVIFDQN, self).__init__()
         self.args = args
         self.obs_shape = args.vae_observation_dim + args.latent_state_shape
+        self.update_times = 0
 
         if not args.vae_model:
             self.encoder = nn.Sequential(
@@ -128,8 +120,6 @@ class NVIFDQN(nn.Module):
         self.q_net = nn.Sequential(
             nn.Linear(self.obs_shape, args.hidden_dim),
             nn.ReLU(),
-            nn.Linear(args.hidden_dim, args.hidden_dim),
-            nn.ReLU(),
             nn.Linear(args.hidden_dim, args.n_actions),
         )
 
@@ -142,8 +132,13 @@ class NVIFDQN(nn.Module):
         return q
 
     def update_param(self, target_model):
-        for param, target_param in zip(self.parameters(), target_model.parameters()):
-            param.data.copy_(self.args.tau * target_param.data + (1 - self.args.tau) * param.data)
+        # for param, target_param in zip(self.parameters(), target_model.parameters()):
+        #     param.data.copy_(self.args.tau * target_param.data + (1 - self.args.tau) * param.data)
+        if self.update_times == self.args.update_interval:
+            self.load_state_dict(target_model.state_dict())
+            self.update_times = 0
+        else:
+            self.update_times += 1
 
 
 class Policy:
@@ -229,12 +224,10 @@ def test_policy(experiment, config_name, test_num=10, render=True):
 
         steps, ep_ret = 0, 0
         obs = env.reset()
-        prob = np.zeros(run_args.n_actions)
 
         while True:
             steps += 1
-            actions = policy.choose_action(observations=obs, mean_actions=prob, epsilon=0.0)
-            next_prob = get_prob(actions=actions, n_actions=run_args.n_actions)
+            actions = policy.choose_action(observations=obs, epsilon=0.0)
 
             if render:
                 env.render()
@@ -243,7 +236,6 @@ def test_policy(experiment, config_name, test_num=10, render=True):
             terminal = is_terminated(terminated=done)
 
             obs = next_obs
-            prob = next_prob
 
             if run_args.global_reward:
                 ep_ret += sum([rewards[agent] for agent in rewards.keys()]) / len(rewards)

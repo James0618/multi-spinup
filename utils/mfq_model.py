@@ -6,7 +6,6 @@ import numpy as np
 from configs.load_config import load_config, load_default_config
 from envs.gather import GatherEnv
 import argparse
-import time
 
 
 class ReplayBuffer(object):

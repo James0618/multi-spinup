@@ -20,8 +20,11 @@ attack_food_reward: 1.0
 
 gcn: false
 with_state: false
+mean_state: false
 zero_state: false
 global_reward: false
+global_net: false
+online: false
 
 vae_observation_dim: 96
 hidden_dim: 128
